@@ -56,7 +56,7 @@ export default function GlobalContextCapture() {
       // 2. Try to get existing segments from YOUR Database first
       // Note: Using localhost:5000 based on your previous console error logs
       const dbResponse = await fetch(
-        `http://localhost:5000/api/segmented-content`,
+        `https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/segmented-content`,
       );
       if (!dbResponse.ok)
         throw new Error("Failed to check database for existing segments.");
@@ -120,7 +120,7 @@ export default function GlobalContextCapture() {
       const segmentsToStore = GlobalAssetCapture(json, []);
       if (segmentsToStore && segmentsToStore.length > 0) {
         const savePromises = segmentsToStore.map((seg) =>
-          fetch("http://localhost:5000/api/segmented-content", {
+          fetch("https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/segmented-content", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

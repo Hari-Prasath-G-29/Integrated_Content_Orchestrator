@@ -72,7 +72,7 @@ const ENV = getEnv();
 const saveTranslationToDb = async (source, target, sLang, tLang, docName) => {
   try {
     const response = await fetch(
-      "http://z80d8dccsa.execute-api.us-east-1.amazonaws.com/Prod/api/translated-content",
+      "https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/translated-content",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -803,7 +803,7 @@ export default function SmartTMTranslationHub({
       // STEP 1: SMART LOOKUP (The "Brain" API)
       // ---------------------------------------------------------
       const lookupRes = await fetch(
-        "http://z80d8dccsa.execute-api.us-east-1.amazonaws.com/Prod/api/smart-tm-lookup",
+        "https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/smart-tm-lookup",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
