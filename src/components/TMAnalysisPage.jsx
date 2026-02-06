@@ -1,16 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const TMAnalysis = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
 
+  // State to track if the user has made a choice (optional feedback)
+  const [userFeedback, setUserFeedback] = useState(null);
+
   // Destructure data passed from SmartTMTranslationHub 
   const { segment, reviewData, projectName } = state || {};
   
   // Calculate display values
   const score = Math.round((reviewData?.tmScore || 0) * 100);
-  const wordCount = segment?.words || 0;
+  const sentenceCount = segment?.sentences || segment?.words || 0;
+
+  // Function to handle Approval
+  const handleApprove = () => {
+    console.log("Analysis Approved for Segment:", segment?.index);
+    setUserFeedback("approved");
+    // You can add an API call here
+    alert("Analysis Approved!");
+    navigate(-1); // Navigate back after action
+  };
+
+  // Function to handle Rejection
+  const handleReject = () => {
+    console.log("Analysis Rejected for Segment:", segment?.index);
+    setUserFeedback("rejected");
+    // You can add an API call here
+    alert("Analysis Rejected. Feedback sent to the system.");
+    navigate(-1); // Navigate back after action
+  };
 
   return (
     <div className="tm-analysis-page">
@@ -21,20 +42,20 @@ const TMAnalysis = () => {
             <span className="tm-analysis-icon">📊</span>
             <div className="tm-title-block">
               <h2>Translation Memory Analysis</h2>
-              <p>Word-level TM leverage breakdown for this segment</p>
+              <p>Sentence-level TM leverage breakdown for this segment</p>
             </div>
           </div>
           <button className="tm-close-x" onClick={() => navigate(-1)} aria-label="Close">×</button>
         </header>
 
         <div className="tm-analysis-body">
-          {/* Section 1: Translation Summary [Matches Screenshot] */}
+          {/* Section 1: Translation Summary */}
           <div className="tm-summary-section">
             <div className="tm-summary-card-header">
               <span className="tm-summary-icon-small">📈</span>
               <div className="tm-summary-text">
                 <h3>Translation Summary</h3>
-                <p>Segment {segment?.index || 1} • {wordCount} source words • {wordCount} translated words</p>
+                <p>Segment {segment?.index || 1} • {sentenceCount} source Sentences • {sentenceCount} translated Sentences</p>
               </div>
             </div>
 
@@ -45,15 +66,15 @@ const TMAnalysis = () => {
               </div>
               <div className="tm-stat-card">
                 <span className="tm-stat-label-top">Exact Matches</span>
-                <span className="tm-stat-value-zero">0 words</span>
+                <span className="tm-stat-value-zero">0 Sentences</span>
               </div>
               <div className="tm-stat-card">
                 <span className="tm-stat-label-top">Fuzzy Matches</span>
-                <span className="tm-stat-value-zero">0 words</span>
+                <span className="tm-stat-value-zero">0 Sentences</span>
               </div>
-              <div className="tm-stat-card tm-new-words-card">
-                <span className="tm-stat-label-top">New Words (AI Generated)</span>
-                <span className="tm-stat-value-blue">{wordCount} words</span>
+              <div className="tm-stat-card tm-new-sentences-card">
+                <span className="tm-stat-label-top">New Sentences (AI Generated)</span>
+                <span className="tm-stat-value-blue">{sentenceCount} Sentences</span>
               </div>
             </div>
           </div>
@@ -80,6 +101,25 @@ const TMAnalysis = () => {
               <span className="tm-chevron">▼</span>
             </div>
           </div>
+
+          {/* --- NEW FUNCTIONAL BUTTONS SECTION --- */}
+          <div className="tm-analysis-actions">
+            <button 
+              className="tm-btn-reject" 
+              onClick={handleReject}
+              disabled={userFeedback === "rejected"}
+            >
+              <span className="tm-btn-icon">✖</span> Reject Analysis
+            </button>
+            <button 
+              className="tm-btn-approve" 
+              onClick={handleApprove}
+              disabled={userFeedback === "approved"}
+            >
+              <span className="tm-btn-icon">✔</span> Approve Analysis
+            </button>
+          </div>
+          {/* --------------------------------------- */}
         </div>
       </div>
     </div>

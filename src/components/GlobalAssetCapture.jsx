@@ -1,3 +1,4 @@
+//final one
 import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
@@ -43,7 +44,29 @@ export default function GlobalContextCapture() {
 
   const handleSave = () => alert("Project changes saved successfully!");
 
-    const openSegmentationPreview = async () => {
+  // const openSegmentationPreview = async () => {
+  //   setContentTab("preview");
+  //   if (isSegLoading) return;
+  //   setIsSegLoading(true);
+  //   setSegError("");
+  //   setApiRawJson(null);
+  //   try {
+  //     const url = process.env.REACT_APP_N8N_SEGMENT_URL || "http://172.16.4.237:8010/webhook/pdfUpload";
+  //     const res = await fetch(url, {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ projectName, content: contentText, lang: inboundLang }),
+  //     });
+  //     if (!res.ok) throw new Error(`n8n responded with HTTP ${res.status}`);
+  //     const json = await res.json();
+  //     setApiRawJson(json);
+  //   } catch (err) {
+  //     setSegError(err?.message || "Failed to generate segments via n8n.");
+  //   } finally {
+  //     setIsSegLoading(false);
+  //   }
+  // };
+  const openSegmentationPreview = async () => {
     setContentTab("preview");
 
     // 1. If we already have data in memory for this session, don't fetch anything
@@ -139,7 +162,7 @@ export default function GlobalContextCapture() {
       setIsSegLoading(false);
     }
   };
-
+  
   const handleComplete = () => {
     // Calling the helper function from the bottom
     const segmentsForNext = GlobalAssetCapture(apiRawJson, localSegments, inboundLang);

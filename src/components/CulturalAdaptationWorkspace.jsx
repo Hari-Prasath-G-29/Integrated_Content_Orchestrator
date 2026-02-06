@@ -1,12 +1,13 @@
-
 import React, { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
 
 /**
  * Cultural Intelligence Hub
- * - Fix: robust score parsing from n8n ("92.5%", "0.925", etc.)
- * - NEW: Gate popup before switching to "Culturally-Adapted Draft" tab
+ * - Robust score parsing from n8n ("92.5%", "0.925", etc.)
+ * - Gate popup before switching to "Culturally-Adapted Draft" tab
+ * - Change Log logic for accepted suggestions
+ * - NEW: In main page, "Mark as Reviewed" appears only after adapted text is populated
  * - Keeps all other functionality intact.
  */
 export default function CulturalAdaptationWorkspace({
@@ -176,7 +177,7 @@ export default function CulturalAdaptationWorkspace({
     );
   };
 
-  /** ====== NEW: Robust score parsing from n8n (supports %, decimals, normalized) ====== */
+  /** ====== Robust score parsing from n8n (supports %, decimals, normalized) ====== */
   const parseScore = (val) => {
     if (val === null || val === undefined) return null;
 
@@ -321,7 +322,7 @@ export default function CulturalAdaptationWorkspace({
   );
 
   /** ========= UI OVERLAYS (do not mutate base segments) ========= */
-  const [segOverrides, setSegOverrides] = useState({}); // { [id]: { adapted?: string, status?: string } }
+  const [segOverrides, setSegOverrides] = useState({}); // { [id]: { adapted?: string, status?: string, changeLog?: {from,to} } }
   const [isAdapting] = useState(false);
   const [adaptError] = useState(null);
 
@@ -347,7 +348,7 @@ export default function CulturalAdaptationWorkspace({
     return Math.round(pct);
   }, [progressItems]);
 
-  /** ---------- NEW: Gate modal before entering Draft tab ---------- */
+  /** ---------- Gate modal before entering Draft tab ---------- */
   const [isDraftGateOpen, setIsDraftGateOpen] = useState(false);
 
   const trySwitchToTab = (nextTab) => {
@@ -491,7 +492,7 @@ export default function CulturalAdaptationWorkspace({
       const { translation, problem, suggestion } =
         await extractTPSFromResponse(resForTPS);
 
-      // 2) NEW: A/B suggestions and scores (+ overall score if provided)
+      // 2) A/B suggestions and scores (+ overall score if provided)
       const resForExtras = res.clone();
       const { suggestionA, suggestionB, score, scoreA, scoreB } =
         await extractExtrasFromResponse(resForExtras);
@@ -574,12 +575,24 @@ export default function CulturalAdaptationWorkspace({
     const sanitized = String(suggestionText || "").trim();
     if (!sanitized.length) return;
 
+    // Capture the "From" text for the Change Log.
+    const fromText =
+      selectedResolved.adapted ||
+      selectedResolved.translated ||
+      selectedResolved.source ||
+      "";
+
     setSegOverrides((prev) => ({
       ...prev,
       [selectedResolved.id]: {
         ...prev[selectedResolved.id],
         adapted: sanitized,
-        status: "Pending",
+        status: "Pending", // Keep pending so user can review on main workspace
+        // Add Change Log Entry
+        changeLog: {
+          from: fromText,
+          to: sanitized,
+        },
       },
     }));
 
@@ -721,7 +734,10 @@ export default function CulturalAdaptationWorkspace({
         lang: seg.lang || getTargetLang(therapyArea),
         source: seg.source,
         adapted: bestText,
-        score: typeof analysis?.overallScore === "number" ? analysis.overallScore : null,
+        score:
+          typeof analysis?.overallScore === "number"
+            ? analysis.overallScore
+            : null,
         needsStatus: analysis?.needsStatus || null,
       };
     });
@@ -990,26 +1006,60 @@ export default function CulturalAdaptationWorkspace({
                   </div>
 
                   {/* Culturally Adapted Text */}
-                  <div className="tm-detail-head">
-                    <span className="tm-chip">Culturally Adapted Text</span>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        className="tm-btn primary small"
-                        onClick={handleMarkReviewed}
-                        aria-label="Mark current segment as reviewed"
-                      >
-                        Mark as Reviewed
-                      </button>
-                    </div>
-                  </div>
+                  {(() => {
+                    // --------- NEW: only show the Mark as Reviewed button once adapted text exists ----------
+                    const showMarkReviewed = !!selectedResolved?.adapted?.trim();
+                    const isAlreadyReviewed =
+                      String(selectedResolved?.status || "").toLowerCase() === "reviewed";
 
-                  <div className="tm-box" style={{ whiteSpace: "pre-wrap" }}>
-                    {selectedResolved.adapted?.trim().length ? (
-                      selectedResolved.adapted
-                    ) : (
-                      <span className="tm-light">— Awaiting cultural adaptation —</span>
-                    )}
-                  </div>
+                    return (
+                      <>
+                        <div className="tm-detail-head">
+                          <span className="tm-chip">Culturally Adapted Text</span>
+
+                          {showMarkReviewed && (
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button
+                                className="tm-btn primary small"
+                                onClick={handleMarkReviewed}
+                                aria-label="Mark current segment as reviewed"
+                                disabled={isAlreadyReviewed}
+                                title={
+                                  isAlreadyReviewed
+                                    ? "Already reviewed"
+                                    : "Mark this segment as reviewed"
+                                }
+                              >
+                                {isAlreadyReviewed ? "Reviewed" : "Mark as Reviewed"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="tm-box" style={{ whiteSpace: "pre-wrap" }}>
+                          {selectedResolved.adapted?.trim().length ? (
+                            selectedResolved.adapted
+                          ) : (
+                            <span className="tm-light">— Awaiting cultural adaptation —</span>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {/* UI: CHANGE LOG (MATCHING SCREENSHOT) */}
+                  {selectedResolved.changeLog && (
+                    <div className="tm-change-log-section">
+                      <div className="tm-change-log-label">Change Log:</div>
+                      <div className="tm-change-log-banner">
+                        <span className="tm-change-log-tick">✓</span>
+                        <span className="tm-change-log-text">
+                          <strong>Accepted:</strong>{" "}
+                          <del>{selectedResolved.changeLog.from}</del> → {selectedResolved.changeLog.to}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {analysisError && (
                     <div className="tm-inline-error" role="alert" style={{ marginTop: 8 }}>
@@ -1041,7 +1091,7 @@ export default function CulturalAdaptationWorkspace({
             </div>
           </section>
         ) : activeTab === "draft" ? (
-          /* ============= NEW CULTURALLY-ADAPTED DRAFT VIEW ============= */
+          /* ============= CULTURALLY-ADAPTED DRAFT VIEW ============= */
           <div className="tm-draft-container">
             <div className="tm-draft-header-section">
               <h2 className="tm-page-subtitle">Culturally-Adapted Draft Translation</h2>
@@ -1097,7 +1147,7 @@ export default function CulturalAdaptationWorkspace({
             </div>
           </div>
         ) : (
-          /* ============= NEW INTELLIGENCE REPORT VIEW ============= */
+          /* ============= INTELLIGENCE REPORT VIEW ============= */
           <div className="tm-report-container">
             {/* Header */}
             <div className="tm-report-header">
@@ -1249,30 +1299,7 @@ export default function CulturalAdaptationWorkspace({
             </div>
 
             <div className="draft-gate-actions">
-              {/* <button className="tm-btn outline" onClick={() => setIsDraftGateOpen(false)}>
-                Back
-              </button> */}
-
-              {/* To allow "Proceed anyway", remove the disabled prop below */}
-              {/* <button
-                className="tm-btn primary"
-                onClick={() => {
-                  const total = Math.max(progressItems.total || 0, segments.length);
-                  const reviewed = progressItems.reviewed || 0;
-                  if (reviewed >= total) {
-                    setIsDraftGateOpen(false);
-                    setActiveTab("draft");
-                  }
-                }}
-                disabled={progressItems.reviewed < Math.max(progressItems.total || 0, segments.length)}
-                title={
-                  progressItems.reviewed < Math.max(progressItems.total || 0, segments.length)
-                    ? "Complete all reviews to continue"
-                    : "Open Draft"
-                }
-              >
-                Open Draft
-              </button> */}
+              {/* To allow "Proceed anyway", enable a button here if needed */}
             </div>
           </div>
         </Modal>
@@ -1554,7 +1581,7 @@ function TerminologyValidationPanel({
           <div className="ai-score-badge">
             <strong>{score}</strong>/100
           </div>
-          {/* NEW: A/B small score chips in header */}
+          {/* A/B small score chips in header */}
           {hasAB &&
             altList.map((alt, i) => (
               <span key={i} className="tm-chip soft" title={`${alt.label} Score`}>
@@ -1564,7 +1591,7 @@ function TerminologyValidationPanel({
         </div>
       </div>
 
-      {/* Approved Terms (unchanged demo row) */}
+      {/* Approved Terms (demo row) */}
       <div className="ai-approved-wrap">
         <div className="ai-approved-bar">
           <span className="ai-approved-icon" aria-hidden>
@@ -1580,7 +1607,7 @@ function TerminologyValidationPanel({
       </div>
 
       <div className="ai-term-list">
-        {/* ===== NEW: Render suggestionA/suggestionB as first two "terms" ===== */}
+        {/* Render suggestionA/suggestionB as first two "terms" */}
         {hasAB &&
           altList.map((alt, idx) => (
             <div key={`alt-${idx}`} className="ai-term-card">
@@ -1588,7 +1615,7 @@ function TerminologyValidationPanel({
                 <span className="ai-needs-badge">⚠ NEEDS REVIEW</span>
               </div>
 
-              {/* Treat label as "Term" display to match the screenshot structure */}
+              {/* Treat label as "Term" display */}
               <div
                 className="ai-term-label"
                 style={{
@@ -1627,7 +1654,7 @@ function TerminologyValidationPanel({
             </div>
           ))}
 
-        {/* ===== Keep your original demo terms/cards below ===== */}
+        {/* Keep original demo items if provided */}
         {items.map((t) => {
           const selected = selectedMap?.[t.id] || "";
           return (
@@ -1733,4 +1760,3 @@ function VisualColorGuidancePanel({ data }) {
     </div>
   );
 }
-

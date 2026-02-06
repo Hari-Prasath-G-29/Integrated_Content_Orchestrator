@@ -7,64 +7,26 @@ import TMLeverageOverview from "./TMLeverageOverview";
 
 /* Sidebar phases (original list retained) */
 const SIDEBAR_PHASES = [
-  {
-    id: 1,
-    name: "Global Context Capture",
-    sub: "Source content analysis",
-    status: "done",
-    iconClass: "icon-context",
-  },
-  {
-    id: 2,
-    name: "Smart TM Translation",
-    sub: "AI-powered translation",
-    status: "active",
-    iconClass: "icon-translation",
-  },
-  {
-    id: 3,
-    name: "Cultural Intelligence",
-    sub: "Cultural adaptation",
-    status: "todo",
-    iconClass: "icon-culture",
-  },
-  {
-    id: 4,
-    name: "Regulatory Compliance",
-    sub: "Compliance validation",
-    status: "todo",
-    iconClass: "icon-compliance",
-  },
-  {
-    id: 5,
-    name: "Quality Intelligence",
-    sub: "Quality assurance",
-    status: "todo",
-    iconClass: "icon-quality",
-  },
-  {
-    id: 6,
-    name: "DAM Integration",
-    sub: "Asset packaging",
-    status: "todo",
-    iconClass: "icon-dam",
-  },
-  {
-    id: 7,
-    name: "Integration Lineage",
-    sub: "System integration",
-    status: "todo",
-    iconClass: "icon-integration",
-  },
+  { id: 1, name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
+  { id: 2, name: "Smart TM Translation", sub: "AI-powered translation", status: "active", iconClass: "icon-translation" },
+  { id: 3, name: "Cultural Intelligence", sub: "Cultural adaptation", status: "todo", iconClass: "icon-culture" },
+  { id: 4, name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
+  { id: 5, name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
+  { id: 6, name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
+  { id: 7, name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
 ];
 
 /* Env helpers */
 const getEnv = () => {
-  const pe = typeof process !== "undefined" && process.env ? process.env : {};
-  const we = typeof window !== "undefined" && window._env_ ? window._env_ : {};
+  const pe = (typeof process !== "undefined" && process.env) ? process.env : {};
+  const we = (typeof window !== "undefined" && window._env_) ? window._env_ : {};
   return { ...we, ...pe };
 };
 const ENV = getEnv();
+
+/** Use .env or hardcode during test */
+// const N8N_WEBHOOK_URL = ENV.REACT_APP_N8N_WEBHOOK_URL || ENV.VITE_N8N_WEBHOOK_URL || "";
+// const N8N_BULK_WEBHOOK_URL = ENV.REACT_APP_N8N_BULK_WEBHOOK_URL || ENV.VITE_N8N_BULK_WEBHOOK_URL || "";
 
 /**
  * Persists the successful AI translation to the PostgreSQL database
@@ -96,15 +58,17 @@ const saveTranslationToDb = async (source, target, sLang, tLang, docName) => {
   }
 };
 
-/** Use .env or hardcode during test */
-// const N8N_WEBHOOK_URL = ENV.REACT_APP_N8N_WEBHOOK_URL || ENV.VITE_N8N_WEBHOOK_URL || "";
-// const N8N_BULK_WEBHOOK_URL = ENV.REACT_APP_N8N_BULK_WEBHOOK_URL || ENV.VITE_N8N_BULK_WEBHOOK_URL || "";
-
 // For quick test you can uncomment and set directly:
-const N8N_WEBHOOK_URL = "http://172.16.4.237:8033/webhook/csv_upload";
-const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8033/webhook/translateAll";
+// const N8N_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload";
+// const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/translateAll";
 
-const N8N_AUTH = ENV.REACT_APP_N8N_TOKEN || ENV.VITE_N8N_TOKEN || "";
+const N8N_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload";
+const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload_bulk";
+
+const N8N_AUTH =
+  ENV.REACT_APP_N8N_TOKEN ||
+  ENV.VITE_N8N_TOKEN ||
+  "";
 
 /** Extract target language from therapyArea like "Respiratory · DE" */
 const getTargetLang = (therapyArea) => {
@@ -133,8 +97,7 @@ const extractTranslated = async (res) => {
 
   if (body && typeof body === "object") {
     if (typeof body.translated === "string") return body.translated.trim();
-    if (body.data && typeof body.data.translated === "string")
-      return body.data.translated.trim();
+    if (body.data && typeof body.data.translated === "string") return body.data.translated.trim();
     for (const k of Object.keys(body)) {
       const v = body[k];
       if (typeof v === "string" && /translat|output/i.test(k)) return v.trim();
@@ -161,13 +124,13 @@ function normalizeOutputMap(outputObj) {
     const m = key.match(/segment[\s_-]*([0-9]+)/i);
     if (m) {
       const ix = m[1]; // "1"
-      byKey[ix] = val; // "1"
-      byKey[`segment ${ix}`] = val; // "segment 1"
-      byKey[`Segment ${ix}`] = val; // case variant
-      byKey[`segment_${ix}`] = val; // "segment_1"
-      byKey[`segment-${ix}`] = val; // "segment-1"
-      byKey[`seg ${ix}`] = val; // "seg 1"
-      byKey[`Seg ${ix}`] = val; // "Seg 1"
+      byKey[ix] = val;                     // "1"
+      byKey[`segment ${ix}`] = val;        // "segment 1"
+      byKey[`Segment ${ix}`] = val;        // case variant
+      byKey[`segment_${ix}`] = val;        // "segment_1"
+      byKey[`segment-${ix}`] = val;        // "segment-1"
+      byKey[`seg ${ix}`] = val;            // "seg 1"
+      byKey[`Seg ${ix}`] = val;            // "Seg 1"
     }
   }
   return byKey;
@@ -199,36 +162,22 @@ async function extractBulkTranslations(res, pending) {
     // CASE A: Array with an item containing { output: { "segment 1": "...", ... } }
     if (Array.isArray(body) && body.length > 0) {
       const first = body[0];
-      if (
-        first &&
-        typeof first === "object" &&
-        first.output &&
-        typeof first.output === "object"
-      ) {
+      if (first && typeof first === "object" && first.output && typeof first.output === "object") {
         return normalizeOutputMap(first.output);
       }
     }
 
     // CASE B: Object with output
-    if (
-      body &&
-      typeof body === "object" &&
-      body.output &&
-      typeof body.output === "object"
-    ) {
+    if (body && typeof body === "object" && body.output && typeof body.output === "object") {
       return normalizeOutputMap(body.output);
     }
 
     // CASE C: Array of items with segmentId/id/index + string fields
-    const arr = Array.isArray(body)
-      ? body
-      : Array.isArray(body?.translations)
-        ? body.translations
-        : Array.isArray(body?.data)
-          ? body.data
-          : Array.isArray(body?.items)
-            ? body.items
-            : null;
+    const arr =
+      Array.isArray(body) ? body :
+      Array.isArray(body?.translations) ? body.translations :
+      Array.isArray(body?.data) ? body.data :
+      Array.isArray(body?.items) ? body.items : null;
 
     const byKey = {};
     if (arr) {
@@ -239,10 +188,7 @@ async function extractBulkTranslations(res, pending) {
         let translated = "";
         for (const k of Object.keys(item)) {
           const v = item[k];
-          if (
-            typeof v === "string" &&
-            /translat|output|target|result/i.test(k)
-          ) {
+          if (typeof v === "string" && /translat|output|target|result/i.test(k)) {
             translated = v.trim();
             break;
           }
@@ -267,10 +213,7 @@ async function extractBulkTranslations(res, pending) {
         else if (v && typeof v === "object") {
           for (const kk of Object.keys(v)) {
             const vv = v[kk];
-            if (
-              typeof vv === "string" &&
-              /translat|output|target|result/i.test(kk)
-            ) {
+            if (typeof vv === "string" && /translat|output|target|result/i.test(kk)) {
               byKey2[k] = vv.trim();
               break;
             }
@@ -299,42 +242,19 @@ async function extractBulkTranslations(res, pending) {
 }
 
 /** Progress modal (visual) */
-function BulkProgressModal({
-  open,
-  progress,
-  subtitle = "Translating all pending segments with Smart TM...",
-}) {
+function BulkProgressModal({ open, progress, subtitle = "Translating all pending segments with Smart TM..." }) {
   if (!open) return null;
-  const pct = Math.round(
-    (progress.done / Math.max(progress.total || 0, 1)) * 100,
-  );
+  const pct = Math.round((progress.done / Math.max(progress.total || 0, 1)) * 100);
 
   return (
-    <div
-      className="tm-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="bulk-progress-title"
-    >
+    <div className="tm-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="bulk-progress-title">
       <div className="tm-modal tm-modal-progress">
         <div className="tm-modal-header">
-          <h3 id="bulk-progress-title" className="tm-modal-title">
-            Bulk Translation in Progress
-          </h3>
-          <button
-            className="tm-close is-disabled"
-            aria-label="Close"
-            disabled
-            title="Closes when translation finishes"
-          >
+          <h3 id="bulk-progress-title" className="tm-modal-title">Bulk Translation in Progress</h3>
+          <button className="tm-close is-disabled" aria-label="Close" disabled title="Closes when translation finishes">
             <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
               <circle cx="14" cy="14" r="13" fill="#EEF3FB" stroke="#CFE0FB" />
-              <path
-                d="M9 9l10 10M19 9L9 19"
-                stroke="#0B1220"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
+              <path d="M9 9l10 10M19 9L9 19" stroke="#0B1220" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
         </div>
@@ -351,20 +271,12 @@ function BulkProgressModal({
         </div>
 
         <div className="tm-info-box">
-          <svg
-            className="tm-info-radio"
-            width="18"
-            height="18"
-            viewBox="0 0 18 18"
-            aria-hidden="true"
-          >
+          <svg className="tm-info-radio" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
             <circle cx="9" cy="9" r="7.5" fill="none" stroke="#9CA3AF" />
             <circle cx="9" cy="9" r="3.5" fill="#1F7AEC" />
           </svg>
           <div className="tm-info-text">
-            <div>
-              This may take several minutes. Please don't close the window.
-            </div>
+            <div>This may take several minutes. Please don't close the window.</div>
           </div>
         </div>
       </div>
@@ -391,14 +303,8 @@ function DraftPanel({
         const id = s.id ?? `seg-${index}`;
         const source = String(s.source ?? "");
         const translatedRaw = String(s.translated ?? "");
-        const translated =
-          translatedRaw.trim() === "— Awaiting translation —"
-            ? ""
-            : translatedRaw.trim();
-        const words =
-          typeof s.words === "number"
-            ? s.words
-            : source.split(/\s+/).filter(Boolean).length;
+        const translated = translatedRaw.trim() === "— Awaiting translation —" ? "" : translatedRaw.trim();
+        const words = typeof s.words === "number" ? s.words : source.split(/\s+/).filter(Boolean).length;
         const status = s.status ?? (translated ? "Completed" : "Pending");
         const lang = s.lang ?? inboundLang ?? "EN";
         return { ...s, id, index, source, translated, words, status, lang };
@@ -426,10 +332,7 @@ function DraftPanel({
 
   const compiledDraft = useMemo(() => {
     return normalized
-      .map(
-        (s) =>
-          `Section ${s.index}\n${(s.translated || "").trim() || "[No translation]"}`,
-      )
+      .map((s) => `Section ${s.index}\n${(s.translated || "").trim() || "[No translation]"}`)
       .join("\n\n---\n\n");
   }, [normalized]);
 
@@ -443,9 +346,7 @@ function DraftPanel({
   };
 
   const handleDownloadAsText = () => {
-    const blob = new Blob([compiledDraft], {
-      type: "text/plain;charset=utf-8",
-    });
+    const blob = new Blob([compiledDraft], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const date = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
@@ -472,27 +373,16 @@ function DraftPanel({
         <div className="dt-header-left">
           <h2 className="dt-title">Complete Draft Translation</h2>
           <div className="dt-subtitle">
-            {totalSegments} segments • {totalWords} words • {tmLeveragePct}% TM
-            leverage
+            {totalSegments} segments • {totalWords} words • {tmLeveragePct}% TM leverage
           </div>
           <div className="dt-subtitle dt-muted">
-            {projectName} &nbsp;&middot;&nbsp; {therapyArea}{" "}
-            &nbsp;&middot;&nbsp; {inboundLang}
+            {projectName} &nbsp;&middot;&nbsp; {therapyArea} &nbsp;&middot;&nbsp; {inboundLang}
           </div>
         </div>
         <div className="dt-header-actions">
-          <button className="dt-btn outline" onClick={handleCopyToClipboard}>
-            Copy to Clipboard
-          </button>
-          <button className="dt-btn outline" onClick={handleDownloadAsText}>
-            Download as Text
-          </button>
-          <button
-            className="dt-btn primary"
-            onClick={() => onSendToCI(normalized)}
-          >
-            Send to Cultural Intelligence
-          </button>
+          <button className="dt-btn outline" onClick={handleCopyToClipboard}>Copy to Clipboard</button>
+          <button className="dt-btn outline" onClick={handleDownloadAsText}>Download as Text</button>
+          <button className="dt-btn primary" onClick={() => onSendToCI(normalized)}>Send to Cultural Intelligence</button>
         </div>
       </div>
 
@@ -502,8 +392,7 @@ function DraftPanel({
         <div className="dt-left">
           {normalized.length === 0 && (
             <div className="dt-empty">
-              No translated segments found. Please run "Translate All" from the
-              Smart TM Translation tab.
+              No translated segments found. Please run "Translate All" from the Smart TM Translation tab.
             </div>
           )}
 
@@ -523,12 +412,7 @@ function DraftPanel({
                     onClick={() => toggleOpen(s.id)}
                     aria-label={open ? "Collapse section" : "Expand section"}
                   >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                       <path
                         d={open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"}
                         stroke="currentColor"
@@ -611,8 +495,8 @@ export default function SmartTMTranslationHub({
     const raw = Array.isArray(state?.segments)
       ? state.segments
       : Array.isArray(segmentsProp)
-        ? segmentsProp
-        : [];
+      ? segmentsProp
+      : [];
 
     return (raw || [])
       .map((seg, i) => {
@@ -646,7 +530,7 @@ export default function SmartTMTranslationHub({
 
   const selected = useMemo(
     () => segments.find((s) => s.id === selectedId) || null,
-    [segments, selectedId],
+    [segments, selectedId]
   );
 
   /** UI overlays (do NOT mutate original segments) */
@@ -655,24 +539,9 @@ export default function SmartTMTranslationHub({
   const [translationError, setTranslationError] = useState(null);
   const [tmLeverageOn, setTmLeverageOn] = useState(true);
 
-  /** Save translation to DB */
-  const handleSaveTranslation = async (
-    source,
-    target,
-    sLang,
-    tLang,
-    docName,
-  ) => {
-    await saveTranslationToDb(source, target, sLang, tLang, docName);
-  };
-
   /** Bulk modal */
   const [isBulkTranslating, setIsBulkTranslating] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState({
-    done: 0,
-    total: 0,
-    failed: 0,
-  });
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0, failed: 0 });
 
   /** Success banner → Generate Draft Translation */
   const [showGenerateDraft, setShowGenerateDraft] = useState(false);
@@ -697,10 +566,7 @@ export default function SmartTMTranslationHub({
   };
 
   /** Detail card enabled iff we have real translation */
-  const isDetailEnabled = useMemo(
-    () => hasRealTranslation(selectedResolved),
-    [selectedResolved],
-  );
+  const isDetailEnabled = useMemo(() => hasRealTranslation(selectedResolved), [selectedResolved]);
 
   /** When switching segments, keep detail disabled until translation exists */
   useEffect(() => {
@@ -723,7 +589,7 @@ export default function SmartTMTranslationHub({
       const o = segOverrides[s.id];
       const translated = (o?.translated ?? s.translated ?? "").trim();
       const status = o?.status ?? s.status;
-      if (translated.length > 0 || status === "Completed") acc += s.words || 0;
+      if (translated.length > 0 || status === "Completed") acc += (s.words || 0);
       return acc;
     }, 0);
     return total > 0 ? { done, total } : progressWordsProp;
@@ -768,7 +634,51 @@ export default function SmartTMTranslationHub({
     });
   };
 
-  // -----------------------------------------------------------------------
+  // /** Single segment translate (kept, via single endpoint if you need it) */
+  // const handleAiTranslate = async () => {
+  //   if (!selected) return;
+  //   if (!N8N_WEBHOOK_URL) {
+  //     setTranslationError("N8N_WEBHOOK_URL is not configured.");
+  //     return;
+  //   }
+
+  //   setIsTranslating(true);
+  //   setTranslationError(null);
+
+  //   setSegOverrides((prev) => ({
+  //     ...prev,
+  //     [selected.id]: {
+  //       ...prev[selected.id],
+  //       translated: "— Awaiting translation —",
+  //       status: "Pending",
+  //     },
+  //   }));
+
+  //   try {
+  //     const translated = await translateOneSegment(selected);
+  //     setSegOverrides((prev) => ({
+  //       ...prev,
+  //       [selected.id]: {
+  //         ...prev[selected.id],
+  //         translated: translated || "— Awaiting translation —",
+  //         status: translated ? "Completed" : "Pending",
+  //       },
+  //     }));
+  //   } catch (err) {
+  //     setTranslationError(err.message || "Translation failed.");
+  //     setSegOverrides((prev) => ({
+  //       ...prev,
+  //       [selected.id]: {
+  //         ...prev[selected.id],
+  //         status: "Pending",
+  //       },
+  //     }));
+  //   } finally {
+  //     setIsTranslating(false);
+  //   }
+  // };
+
+   // -----------------------------------------------------------------------
   // REPLACE YOUR EXISTING handleAiTranslate FUNCTION WITH THIS ONE
   // -----------------------------------------------------------------------
   const handleAiTranslate = async () => {
@@ -1035,10 +945,7 @@ export default function SmartTMTranslationHub({
 
     if (pending.length === 0) {
       // Already translated → show draft tab (hide banner on draft)
-      const mergedSegmentsNow = mergeSegmentsWithOverrides(
-        segments,
-        segOverrides,
-      );
+      const mergedSegmentsNow = mergeSegmentsWithOverrides(segments, segOverrides);
       setDraftSegments(mergedSegmentsNow);
       setTmLeveragePct(0);
       setDraftPrepared(true);
@@ -1136,10 +1043,7 @@ export default function SmartTMTranslationHub({
       });
 
       // Prepare and switch to 'draft' tab with merged segments (hide banner)
-      const mergedSegmentsFinal = mergeSegmentsWithOverrides(
-        segments,
-        locallyMergedOverrides,
-      );
+      const mergedSegmentsFinal = mergeSegmentsWithOverrides(segments, locallyMergedOverrides);
       setDraftSegments(mergedSegmentsFinal);
       setTmLeveragePct(0);
       setDraftPrepared(true);
@@ -1184,12 +1088,9 @@ export default function SmartTMTranslationHub({
             <span className="tm-progress-label">Overall Progress</span>
             <span className="tm-progress-value">{progressPct}%</span>
           </div>
-          <div className="tm-progress-sub">1 of 7 phases completed</div>
+        <div className="tm-progress-sub">1 of 7 phases completed</div>
           <div className="tm-progress-bar">
-            <div
-              className="tm-progress-fill"
-              style={{ width: `${progressPct}%` }}
-            />
+            <div className="tm-progress-fill" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
 
@@ -1221,12 +1122,7 @@ export default function SmartTMTranslationHub({
             <div className="tm-crumbs">
               <button className="tm-crumb">Main Hub</button>
               <svg className="tm-crumb-sep" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  d="M9 6l6 6-6 6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  fill="none"
-                />
+                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" fill="none" />
               </svg>
               <button className="tm-crumb">Glocalization Hub</button>
             </div>
@@ -1239,13 +1135,7 @@ export default function SmartTMTranslationHub({
 
           <div className="tm-header-right">
             <span className="tm-saved">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
                   d="M5 13l4 4L19 7"
                   stroke="#1F7AEC"
@@ -1291,10 +1181,7 @@ export default function SmartTMTranslationHub({
                 {progressWords.done} / {progressWords.total} words
               </span>
               <div className="tm-progress-inline-bar">
-                <div
-                  className="tm-progress-inline-fill"
-                  style={{ width: `${progressPct}%` }}
-                />
+                <div className="tm-progress-inline-fill" style={{ width: `${progressPct}%` }} />
               </div>
             </div>
 
@@ -1318,50 +1205,21 @@ export default function SmartTMTranslationHub({
         {showGenerateDraft && activeTab !== "draft" && (
           <div className="tm-success-banner">
             <div className="tm-success-left">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  fill="#D1FADF"
-                  stroke="#12B981"
-                />
-                <path
-                  d="M7.5 12.5l3 3 6-6"
-                  stroke="#065F46"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" fill="#D1FADF" stroke="#12B981" />
+                <path d="M7.5 12.5l3 3 6-6" stroke="#065F46" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <div className="tm-success-text">
                 <strong>All Segments Completed! 🎉</strong>
                 <span className="tm-success-sub">
-                  Ready to generate the complete draft translation for Cultural
-                  Intelligence review
+                  Ready to generate the complete draft translation for Cultural Intelligence review
                 </span>
               </div>
             </div>
 
-            <button
-              className="tm-success-btn"
-              onClick={handleGenerateDraftTranslation}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  d="M12 2l3 7h7l-5.5 4 2.1 7L12 16l-6.6 4 2.1-7L2 9h7z"
-                  fill="currentColor"
-                />
+            <button className="tm-success-btn" onClick={handleGenerateDraftTranslation}>
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2l3 7h7l-5.5 4 2.1 7L12 16l-6.6 4 2.1-7L2 9h7z" fill="currentColor" />
               </svg>
               <span>Generate Draft Translation</span>
             </button>
@@ -1387,28 +1245,26 @@ export default function SmartTMTranslationHub({
                     mergedStatus === "Pending"
                       ? "pending"
                       : mergedStatus === "Completed"
-                        ? "completed"
-                        : "neutral";
+                      ? "completed"
+                      : "neutral";
 
-                  return (
-                    <button
-                      key={seg.id}
-                      className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
-                      onClick={() => setSelectedId(seg.id)}
-                      aria-label={`Open Segment ${seg.index}`}
-                    >
-                      <div className="tm-seg-item-top">
-                        <span className={`tm-seg-pill ${statusClass}`}>
-                          Segment {seg.index}
-                        </span>
-                        <span className="tm-seg-state">{mergedStatus}</span>
-                      </div>
-                      <div className="tm-seg-snippet">{seg.source}</div>
-                      <div className="tm-seg-meta-row">
-                        <span className="tm-seg-meta">{seg.words} words</span>
-                      </div>
-                    </button>
-                  );
+                return (
+                  <button
+                    key={seg.id}
+                    className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => setSelectedId(seg.id)}
+                    aria-label={`Open Segment ${seg.index}`}
+                  >
+                    <div className="tm-seg-item-top">
+                      <span className={`tm-seg-pill ${statusClass}`}>Segment {seg.index}</span>
+                      <span className="tm-seg-state">{mergedStatus}</span>
+                    </div>
+                    <div className="tm-seg-snippet">{seg.source}</div>
+                    <div className="tm-seg-meta-row">
+                      <span className="tm-seg-meta">{seg.words} words</span>
+                    </div>
+                  </button>
+                );
                 })}
                 {segments.length === 0 && (
                   <div className="tm-empty">No segment present to display.</div>
@@ -1425,8 +1281,7 @@ export default function SmartTMTranslationHub({
                     <h3 className="tm-card-title">TM Leverage</h3>
                     <div className="tm-card-subset">
                       <span className="tm-light">
-                        AI will use Translation Memory for consistency and cost
-                        savings
+                        AI will use Translation Memory for consistency and cost savings
                       </span>
                     </div>
                   </div>
@@ -1460,14 +1315,11 @@ export default function SmartTMTranslationHub({
                 </div>
 
                 {translationError && (
-                  <div className="tm-inline-error" role="alert">
-                    {translationError}
-                  </div>
+                  <div className="tm-inline-error" role="alert">{translationError}</div>
                 )}
                 {!isDetailEnabled && selected && (
                   <div className="tm-inline-hint">
-                    After translation, the detail card with Source/Translated
-                    will enable below.
+                    After translation, the detail card with Source/Translated will enable below.
                   </div>
                 )}
               </div>
@@ -1480,21 +1332,16 @@ export default function SmartTMTranslationHub({
                 {!isDetailEnabled && (
                   <div className="tm-detail-overlay">
                     <div className="tm-overlay-content">
-                      <div className="tm-overlay-title">
-                        Waiting for translation…
-                      </div>
+                      <div className="tm-overlay-title">Waiting for translation…</div>
                       <div className="tm-overlay-sub">
-                        Click <strong>AI Translate</strong> above, or use{" "}
-                        <strong>Translate All</strong>.
+                        Click <strong>AI Translate</strong> above, or use <strong>Translate All</strong>.
                       </div>
                     </div>
                   </div>
                 )}
 
                 <div className="tm-card-header">
-                  <h3 className="tm-card-title">
-                    Section {selectedResolved?.index ?? 1}
-                  </h3>
+                  <h3 className="tm-card-title">Section {selectedResolved?.index ?? 1}</h3>
                   <div className="tm-card-subset">
                     <span className="tm-light">body</span>
                   </div>
@@ -1502,8 +1349,7 @@ export default function SmartTMTranslationHub({
 
                 {!selected && (
                   <div className="tm-empty large">
-                    Select a segment from the left to view Source &amp;
-                    Translated text.
+                    Select a segment from the left to view Source &amp; Translated text.
                   </div>
                 )}
 
@@ -1514,76 +1360,59 @@ export default function SmartTMTranslationHub({
                         <span className="tm-chip soft">Source Text</span>
                       </div>
                       <div className="tm-detail-row-right">
-                        <span className="tm-lang-chip">
-                          {selectedResolved?.lang || inboundLang || "EN"}
-                        </span>
+                        <span className="tm-lang-chip">{selectedResolved?.lang || inboundLang || "EN"}</span>
                       </div>
                     </div>
-                    <div className="tm-box source">
-                      {selectedResolved?.source || ""}
-                    </div>
+                    <div className="tm-box source">{selectedResolved?.source || ""}</div>
 
                     <div className="tm-detail-actions">
-                      <button
-                        className="tm-btn outline small"
-                        disabled={!isDetailEnabled}
-                      >
+                      <button className="tm-btn outline small" disabled={!isDetailEnabled}>
                         Edit Translation
                       </button>
                     </div>
 
                     <div className="tm-chip success">Translated Text</div>
                     <div className="tm-box translated">
-                      {isDetailEnabled ? (
-                        selectedResolved?.translated || ""
-                      ) : (
-                        <span className="tm-light">
-                          — Awaiting translation —
-                        </span>
-                      )}
+                      {isDetailEnabled
+                        ? (selectedResolved?.translated || "")
+                        : <span className="tm-light">— Awaiting translation —</span>}
                     </div>
+
                     <div className="tm-detail-tools">
-                      <span className="tm-light">
-                        {/* Display the Score from State */}
-                        TM {tmMatchInfo[selectedResolved?.id] || 0}%
-                      </span>
+  <span className="tm-light">
+    {/* This pulls the actual percentage from the state  */}
+    TM {tmMatchInfo[selectedResolved?.id] || 0}%
+  </span>
 
-                      <div className="tm-detail-spacer" />
+  <div className="tm-detail-spacer" />
 
-                      <button
-                        className="tm-btn link small"
-                        disabled={!isDetailEnabled}
-                      >
-                        Locked
-                      </button>
+  <button className="tm-btn link small" disabled={!isDetailEnabled}>
+    Locked
+  </button>
 
-                      <button
-                        className="tm-link-btn"
-                        disabled={!isDetailEnabled}
-                        onClick={() => {
-                          // Retrieve the metadata (score, glossary, etc.) stored during translation
-                          const reviewData =
-                            selectedResolved?.reviewData ||
-                            segOverrides[selectedResolved?.id]?.reviewData;
+  <button
+    className="tm-link-btn"
+    disabled={!isDetailEnabled}
+    onClick={() => {
+      // Retrieve the metadata (score, glossary, etc.) stored during translation [cite: 157-158]
+      const reviewData = selectedResolved?.reviewData || segOverrides[selectedResolved?.id]?.reviewData;
 
-                          navigate("/tm-analysis", {
-                            state: {
-                              segment: selectedResolved,
-                              reviewData: reviewData,
-                              projectName: projectName,
-                              targetLang: inboundLang || "EN",
-                              sourceLang: "English",
-                              allSegments: segments,
-                            },
-                          });
-                        }}
-                      >
-                        View TM Analysis{" "}
-                        {selectedResolved?.status === "Review Needed"
-                          ? "(Action Required)"
-                          : ""}
-                      </button>
-                    </div>
+      navigate("/tm-analysis", {
+        state: {
+          segment: selectedResolved,
+          reviewData: reviewData,
+          projectName: projectName,
+          targetLang: inboundLang || "EN",
+          sourceLang: "English",
+          allSegments: segments
+        }
+      });
+    }}
+  >
+    View TM Analysis {selectedResolved?.status === "Review Needed" ? "(Action Required)" : ""}
+  </button>
+</div>
+                  
                   </div>
                 )}
               </div>
@@ -1597,23 +1426,20 @@ export default function SmartTMTranslationHub({
             projectName={projectName}
             therapyArea={therapyArea}
             inboundLang={inboundLang}
-            segments={
-              draftPrepared
-                ? draftSegments
-                : mergeSegmentsWithOverrides(segments, segOverrides)
-            }
+            segments={draftPrepared ? draftSegments : mergeSegmentsWithOverrides(segments, segOverrides)}
             tmLeveragePct={tmLeveragePct}
             onBackToWorkspace={() => setActiveTab("workspace")} // no mini top bar shown
             onSendToCI={handleSendToCI}
           />
         )}
-
+        
         {/* === NEW TM LEVERAGE TAB INTEGRATION === */}
         {activeTab === "tm" && (
-          <TMLeverageOverview
-            segments={mergeSegmentsWithOverrides(segments, segOverrides)}
+          <TMLeverageOverview 
+            segments={mergeSegmentsWithOverrides(segments, segOverrides)} 
           />
         )}
+        
       </div>
 
       {/* Bulk progress modal */}

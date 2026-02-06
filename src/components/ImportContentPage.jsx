@@ -1513,10 +1513,6 @@ export default function ImportContentPage() {
             <div className="modal-header">
               <div>
                 <div className="modal-title-row">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" stroke="#111" strokeWidth="2" />
-                    <path d="M12 8v8M8 12h8" stroke="#111" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
                   <h2 id="modal-title" className="modal-title">
                     {formatHeaderTitle(selectedCard)}
                   </h2>
@@ -1540,7 +1536,7 @@ export default function ImportContentPage() {
 
                   <div className="info-item">
                     <div className="info-label">Status</div>
-                    <span className={`chip ${chipClassFriendly(selectedCard.statusChip)}`}>
+                    <span className="chip chip-soft">
                       {friendlyStatusText(selectedCard.statusChip)}
                     </span>
                   </div>
@@ -1552,7 +1548,7 @@ export default function ImportContentPage() {
 
                   <div className="info-item">
                     <div className="info-label">Content Type</div>
-                    <div className="info-value">{selectedCard.documentContent ? "text" : "none"}</div>
+                    <span className="chip chip-soft">{selectedCard.documentContent ? "text" : "none"}</span>
                   </div>
                 </div>
               </div>
@@ -1613,10 +1609,18 @@ export default function ImportContentPage() {
                   </svg>
                   <h3 className="section-title">Content Preview</h3>
                 </div>
-                <div className="content-preview">
-                  <pre className="content-pre muted">
-{trimForPreview(selectedCard.documentContent)}
-                  </pre>
+
+                <div className="content-preview enhanced">
+                  <div className="content-preview-head">
+                    <div className="cp-title">Preview</div>
+                    <div className="cp-meta">{(selectedCard.documentContent || "").split(/\s+/).filter(Boolean).length} words</div>
+                  </div>
+
+                  <div className="content-preview-body">
+                    <div className="content-text">
+                      {trimForPreview(selectedCard.documentContent)}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
