@@ -1,0 +1,300 @@
+
+/* ====== Card ====== */
+.ap-card {
+    background: #fff;
+    border: 1px solid #E9EEF5;            /* soft light border */
+    border-radius: 16px;                   /* slightly more rounded for screenshot feel */
+    padding: 20px;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04); /* super subtle */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  /* ====== Header ====== */
+  .ap-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  
+  .ap-title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0 0 6px 0;
+    color: #0F172A;                        /* dark slate */
+  }
+  
+  .ap-sub {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #8A94A6;                        /* muted */
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  
+  .chip {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 16px;
+    background: #F4F7FB;
+    color: #3C4350;
+  }
+  
+  .chip.small {
+    font-size: 12px;
+    background: #F0F6FF;
+    color: #0E64DC;
+  }
+  
+  .ap-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-weight: 600;
+    background: #E7F0FF;                   /* blue tint like screenshot */
+    color: #1061D7;
+    border-radius: 999px;
+  }
+  
+  .ap-status .clock {
+    width: 16px;
+    height: 16px;
+  }
+  
+  
+  /* ====== Title and Count (match screenshot weight) ====== */
+  .pp-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .pp-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .pp-title {
+    /* font-weight: 600; */
+    color: #64748b;
+    font-size: 15px
+  }
+  
+  .pp-count {
+    font-weight: 700;
+    color: #0F172A;
+    font-size: 13px;
+  }
+  
+  
+  
+  /* ====== Progress Bar Layout ====== */
+  .pp-bar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  
+  
+  
+  
+  /* Light grey track for not-done */
+  .pp-seg { height: 10px; border-radius: 999px; background: #EDF2F7; position: relative; }
+  
+  /* ✅ Green only for completed */
+  .pp-seg--done { background: #22C55E; }
+  
+  /* ✅ Not-done stays light grey */
+  .pp-seg--todo { background: #EDF2F7; }
+  
+  /* Optional: visual hint for "current" (NOT GREEN) */
+  .pp-seg--current {
+    background: #EAF3FF;        /* light blue fill */
+    border: 1px solid #1061D7;  /* thin blue outline */
+  }
+  
+  
+  
+  /* Under each segment: P1, P2… (always visible) */
+  .pp-seg-label {
+    position: absolute;
+    top: 16px;                          /* place below track */
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #7A818A;
+    font-size: 12px;
+  }
+  
+  /* Hover-only badge: hidden by default */
+  .pp-seg-badge {
+    position: absolute;
+    top: -28px;                         /* above track */
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #FFFFFF;
+    color: #0F172A;                     /* dark text */
+    border: 1px solid #C9CFD8;          /* thin grey outline (matches screenshot) */
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+  
+    /* hidden initially */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+  
+  
+  /* Show the badge only when hovering that segment */
+  .pp-seg:hover .pp-seg-badge {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  
+  
+  /* Keyboard accessibility: show badge on focus too */
+  .pp-seg:focus-visible .pp-seg-badge,
+  .pp-seg:focus-within .pp-seg-badge {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  
+  .pp-seg:focus-visible {
+    box-shadow: 0 0 0 2px #BED9FF;      /* focus ring */
+  }
+  
+  /* ====== Divider line ====== */
+  
+  .ap-divider {
+    height: 2px;
+      width: 100%;
+      background: #E9EEF5;
+      margin: 12px 0;
+      margin-top: 22px;         /* vertical rhythm between sections */
+  }
+  
+  /* ====== Grid rows for markets/languages ====== */
+  .ap-grid {
+    display: grid;
+      grid-template-columns: 1fr;
+      row-gap: 13px;
+      margin-top: -15px;
+      margin-bottom: -22px;
+  }
+  
+  
+  .ap-section,
+  .ap-grid,
+  .ap-metrics {
+    /* ensures lines don’t crowd content */
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+  
+  .ap-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .ap-label {
+    color: #7A818A;
+    font-size: 15px;
+  }
+  
+  .ap-value {
+    color: #0F172A;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  
+  /* ====== Metrics row ====== */
+  .ap-metrics {
+    display: flex;
+    align-items: center;
+    gap: 159px;
+  }
+  
+  .ap-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 80px;
+    margin-top: -21px;
+  }
+  
+  .ap-metric-icon {
+    width: 20px;
+      height: 16px;
+    color: #59A1FF;                        /* bluish icons */
+    margin-bottom: -13px;
+  }
+  
+  .ap-metric-label {
+    color: #7A818A;
+    font-size: 12px;
+  }
+  
+  .ap-metric-value {
+    font-weight: 700;
+    font-size: 14px;
+    color: #0F172A;
+    margin-top: -4px;
+  }
+  
+  /* ====== Footer buttons ====== */
+  .ap-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .ap-btn {
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 700;
+    border: 1px solid #D7DDE5;
+    background: #fff;
+    color: #0F172A;
+  }
+  
+  /* Full-width primary (matches screenshot) */
+  .ap-btn--primary {
+    flex: 1;
+    background: #1F7AEC;
+    border-color: #1F7AEC;
+    color: #fff;
+  }
+  
+  /* Ghost delete */
+  .ap-btn--ghost {
+    background: #fff;
+    color: #0F172A;
+  }
+  
+  .ap-btn svg {
+    margin-right: 8px;
+  }
+  
+  /* ====== Card spacing to your grid ====== */
+  .gh-list-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  
+  /* ====== Small utilities ====== */
+  .sep {
+    color: #C4C9CF;
+  }
+  

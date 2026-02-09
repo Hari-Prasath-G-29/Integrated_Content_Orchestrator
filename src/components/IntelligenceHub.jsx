@@ -1,72 +1,40 @@
 
-// import React from 'react';
-// import PsychologyIcon from '@mui/icons-material/Psychology';
-// import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-// import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
-// import TrackChangesIcon from '@mui/icons-material/TrackChanges';
-// import EqualizerIcon from '@mui/icons-material/Equalizer';
-// import '../App.css'; // keep this import so CSS applies
-
-// export default function IntelligenceHub() {
-//   return (
-//     <main className="intel-page">
-//       {/* Add the outlined variant + (optional) exact 2rem rounding */}
-//       <section className="intel-card intel-card--outlined rounded-2rem">
-//         <div className="intel-card__header">
-//           <PsychologyIcon className="intel-card__logo" />
-//           <ArrowForwardIcon className="intel-card__arrow" />
-//         </div>
-
-//         <h1 className="intel-card__title">Intelligence Hub</h1>
-//         <p className="intel-card__subtitle">
-//           Unified view of all your brand intelligence insights
-//         </p>
-
-//         <ul className="intel-card__list">
-//           <li><PeopleOutlineIcon className="list-icon" /> Audience Insights</li>
-//           <li><TrackChangesIcon className="list-icon" /> Content Performance</li>
-//           <li><EqualizerIcon className="list-icon" /> Competitive Analysis</li>
-//         </ul>
-
-//         <div className="intel-actions">
-//           <button className="intel-card__cta">View Intelligence</button>
-//         </div>
-//       </section>
-//     </main>
-//   );
-// }
-
-
-
-//ntelligenceHub.jsx
 import React from 'react';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
-import '../App.css';
- 
+// import '../App.css'; 
+// import './css/Intelligent.css';
+import "./css/Header.css";
+
 export default function IntelligenceHub() {
   return (
-    <div className="intel-card">
-      <div className="intel-card__header">
-        <PsychologyIcon className="intel-card__logo" />
-        <ArrowForwardIcon className="intel-card__arrow" />
-      </div>
- 
-      <h1 className="intel-card__title">Intelligence Hub</h1>
-      <p className="intel-card__subtitle">
-        Unified view of all your brand intelligence insights
-      </p>
- 
-      <ul className="intel-card__list">
-        <li><PeopleOutlineIcon /> Audience Insights</li>
-        <li><TrackChangesIcon /> Content Performance</li>
-        <li><EqualizerIcon /> Competitive Analysis</li>
-      </ul>
- 
-      <button className="intel-card__cta">View Intelligence</button>
+    <div className="ops-card ops-card--workshop">
+      {/* Add the outlined variant + (optional) exact 2rem rounding */}
+      {/* <section className="ops-card ops-card--hub"> */}
+        <div className="ops-card__header">
+          <PsychologyIcon className="ops-card__icon" />
+          <ArrowForwardIcon className="ops-card__arrow" />
+        </div>
+
+        <h1 className="ops-card__title">Intelligence Hub</h1>
+        <p className="ops-card__subtitle">
+          Unified view of all your brand intelligence insights
+        </p>
+
+        <ul className="ops-card__list">
+          <li><PeopleOutlineIcon className="list-icon" /> Audience Insights</li>
+          <li><TrackChangesIcon className="list-icon" /> Content Performance</li>
+          <li><EqualizerIcon className="list-icon" /> Competitive Analysis</li>
+        </ul>
+
+        <div className="ops-card__spacer">
+          <button className="ops-primary">View Intelligence</button>
+        </div>
+      {/* </section> */}
     </div>
   );
 }
+

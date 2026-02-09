@@ -10,9 +10,33 @@ import ShowChartOutlinedIcon from "@mui/icons-material/ShowChartOutlined";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
 import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
-import '../App.css'; // keep this import so CSS applies
+import "./css/Glocalizationhub.css"
+// import '../App.css'; 
+import {
+  Globe,
+  Plus,
+  RefreshCw,
+  FileText,
+  BarChart3,
+  TrendingUp,
+  CheckCircle,
+  Clock,
+  Target,
+  Brain,
+  Shield,
+  Zap,
+  Eye,
+  Download,
+  Upload,
+  ArrowLeft
+} from 'lucide-react';
+import { Button } from "@mui/material";
 
 import { useNavigate } from "react-router-dom";
+
+import AdaptProgressCard from './AdaptProgressCard';
+import { getAllProjects } from '../lib/progressStore';
+import './css/PhaseProgress.css';
 
 
 
@@ -60,14 +84,45 @@ const navigate = useNavigate();
     // Navigate to the Import Content page
     navigate("/importContentPage");
   };
+  const [records, setRecords] = React.useState(getAllProjects());
+  
+//  React.useEffect(() => {
+//      const sync = () => setRecords(getAllProjects());
+//      window.addEventListener('storage', sync);
+//      const onFocus = () => setRecords(getAllProjects());
+//      window.addEventListener('focus', onFocus);
+//      return () => {
+//        window.removeEventListener('storage', sync);
+//        window.removeEventListener('focus', onFocus);
+//      };
+//  }, []);
+  
+ 
+React.useEffect(() => {
+  const sync = () => setRecords(getAllProjects());
+  window.addEventListener('glocal_progress_updated', sync);
+  window.addEventListener('focus', sync);
+  return () => {
+    window.removeEventListener('glocal_progress_updated', sync);
+    window.removeEventListener('focus', sync);
+  };
+}, []);
 
   return (
     <section className="glocal-hub">
       {/* Top bar */}
       <div className="gh-topbar">
         <div className="gh-titlegroup">
+        <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate('/')}
+            className="shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <h1 className="gh-title">Glocalization Hub</h1>
-          <p className="gh-subtitle">4 active projects · 2 languages supported</p>
+          <p className="gh-subtitle">{records.length} active projects · 3 languages supported</p>
         </div>
         <div className="gh-actions">
           <button type="button" className="gh-btn gh-btn--ghost">
@@ -84,22 +139,22 @@ const navigate = useNavigate();
       {/* Stat list (rows with separators, like the second image) */}
       <div className="gh-stats">
         <StatRow
-          icon={InsertDriveFileOutlinedIcon}
           label="Active Projects"
-          value="4"
+          value={records.length}
+          icon={FileText}
         />
         <StatRow
-          icon={LanguageOutlinedIcon}
+          icon={Globe}
           label="Languages Supported"
-          value="2"
+          value="3"
         />
         <StatRow
-          icon={PsychologyOutlinedIcon}
+          icon={Brain}
           label="Cultural Intelligence"
           value="0%"
         />
         <StatRow
-          icon={ShowChartOutlinedIcon}
+          icon={TrendingUp}
           label="Adaptation Success"
           value="0%"
         />
@@ -141,7 +196,7 @@ const navigate = useNavigate();
       </div>
 
       {/* In Progress Adaptations */}
-      <div className="gh-list">
+      {/* <div className="gh-list">
         <h3 className="gh-section-title">In Progress Adaptations</h3>
              <div className="gh-list-grid">
           <AdaptCard
@@ -155,7 +210,20 @@ const navigate = useNavigate();
             domain="Respiratory"
           />
         </div>
+      </div> */}
+      
+{/* In Progress Adaptations (real) */}
+<div className="gh-list">
+        <h3 className="gh-section-title">In Progress Adaptations</h3>
+        <div className="gh-list-grid">
+         {records.length === 0 ? (
+           <div className="empty"><p>No Content is Found.</p></div>
+         ) : (
+           records.map(rec => <AdaptProgressCard key={rec.id} record={rec} />)
+         )}
+        </div>
       </div>
+
     </section>
   );
 } 

@@ -1,0 +1,398 @@
+/* ====== Global Asset Context Capture (scoped) ====== */
+/* Root grid (non-focus) */
+[data-page="gac"].gac-page {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    min-height: 100vh;
+    background: #f7f9fc;
+    color: #111;
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  
+  /* Sidebar (only on this page) */
+  [data-page="gac"] .gac-sidebar {
+    background: #fff;
+    border-right: 1px solid #e6e8eb;
+    padding: 16px 12px;
+  }
+  
+  /* Main area shell */
+  [data-page="gac"] .gac-main {
+    padding: 16px 20px 96px;
+  }
+  
+  /* Header (base) */
+  [data-page="gac"] .gac-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    padding-bottom: 10px;
+  }
+  
+  /* Breadcrumbs */
+  [data-page="gac"] .crumb { 
+    /* background: none; border: none; font-size: .95rem; font-weight: 500; color: #111827; cursor: pointer; */
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #111827;
+    cursor: pointer; 
+  }
+  [data-page="gac"] .crumb:hover {
+    background-color: #a0522d; /* SaddleBrown or choose your shade */
+    color: #fff; /* White text for contrast */
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  
+  [data-page="gac"] .divider { 
+    width: 1px; height: 16px; background-color: #d1d5db; margin: 0 8px; 
+  }
+  
+  /* Phase label */
+  [data-page="gac"] .phase-label { 
+    display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; margin: 10px 0 8px; 
+  }
+  [data-page="gac"] .badge { 
+    background: #eef6ff; color: #1061b8; border: 1px solid #cfe0ff; border-radius: 999px; padding: 4px 10px; font-weight: 600; font-size: 12px; 
+  }
+  [data-page="gac"] .section-title { margin: 0; font-size: 18px; font-weight: 700; }
+  [data-page="gac"] .section-desc { color: #6b7178; margin: 2px 0 0; font-size: 14px; }
+  
+  /* Cards (base on this page) */
+  [data-page="gac"] .card {
+    background: #fff; border: 1px solid #e6e8eb; border-radius: 12px; margin: 12px 0; padding: 14px;
+  }
+  [data-page="gac"] .card1 {
+    background: #cfe8f1; border: 1px solid #e6e8eb; border-radius: 12px; margin: 12px 0; padding: 14px;
+  }
+  [data-page="gac"] .source-card {
+    border: 1px solid #cfe8f1; border-radius: 10px; padding: 16px; background-color: #eef9fb;
+  }
+  
+  /* Source card header */
+  [data-page="gac"] .card-header1 { margin-bottom: 8px; }
+  [data-page="gac"] .card-title1 { font-weight: 700; font-size: 1rem; color: #0b1f33; }
+  
+  /* Info grid */
+  [data-page="gac"] .info-grid.two {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px;
+  }
+  [data-page="gac"] .info-item1 { display: flex; align-items: center; gap: 8px; }
+  [data-page="gac"] .info-label-line { display: inline-flex; align-items: center; gap: 6px; min-width: 190px; }
+  [data-page="gac"] .chip1 { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: .85rem; font-weight: 700; line-height: 1; }
+  [data-page="gac"] .chip-green { color: #0b3b2e; background-color: #31c19f; }
+  
+  /* Content tabs */
+  [data-page="gac"] .tabs { display: flex; gap: 8px; }
+  [data-page="gac"] .tab { border: 1px solid #e6e8eb; background: #fff; border-radius: 8px 8px 0 0; padding: 8px 12px; font-weight: 600; font-size: 12px; cursor: pointer; }
+  [data-page="gac"] .tab.is-active { border-bottom-color: transparent; background: #f8fbff; }
+  
+  /* Editor & segments */
+  [data-page="gac"] .editor-wrap { border: 1px solid #e6e8eb; border-top: none; border-radius: 0 12px 12px 12px; background: #f8fbff; }
+  [data-page="gac"] .content-editor { width: 100%; min-height: 280px; padding: 12px; border: none; outline: none; resize: vertical; background: transparent; color: #111; white-space: pre-wrap; }
+  [data-page="gac"] .segments-wrap { border: 1px solid #e6e8eb; border-top: none; border-radius: 0 12px 12px 12px; background: #f8fbff; padding: 12px; display: grid; gap: 10px; }
+  
+  /* Sticky footer on this page only */
+  [data-page="gac"] .sticky-footer { position: sticky; bottom: 0; background: transparent; padding-top: 12px; }
+  [data-page="gac"] .primary-cta { width: 100%; background: #1f7aec; color: #fff; border: none; border-radius: 10px; padding: 12px; font-weight: 700; cursor: pointer; }
+  
+  /* ====== Focus mode (scoped) ====== */
+  
+  /* Collapse the grid to a single column in focus mode (critical fix) */
+  [data-page="gac"].gac-page.is-focus {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Ensure main spans full width; center content column */
+  /* [data-page="gac"].gac-page.is-focus .gac-main {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+    background: #f9fbff;
+  } */
+  
+  
+  /* Main spans all columns and fills width */
+  [data-page="gac"].gac-page.is-focus .gac-main {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 100vh;              /* true full-screen height */
+    padding: 24px;                  /* optional outer padding */
+    background: #f9fbff;
+    display: block;                 /* block layout; we’ll control child widths below */
+  }
+  
+  
+  /* Inner container (centers and constrains width) */
+  /* [data-page="gac"].gac-page.is-focus .gac-content {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  } */
+  
+  
+  /* Inner content: remove max-width in focus mode to go full width */
+  [data-page="gac"].gac-page.is-focus .gac-content {
+    width: 100%;
+    max-width: none;                /* ⬅️ remove width cap */
+    margin: 0;                      /* no centering margin */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  /* Focus header polish */
+  [data-page="gac"].gac-page.is-focus .gac-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: #ffffff;
+    backdrop-filter: saturate(180%) blur(2px);
+    border-bottom: 1px solid #eef2f7;
+    box-shadow: 0 1px 0 rgba(16,24,40,0.02);
+    padding: 10px 16px;
+  }
+  
+  /* Hide crumbs in focus */
+  [data-page="gac"].gac-page.is-focus .crumb{
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #111827;
+    cursor: pointer;
+  }
+  [data-page="gac"].gac-page.is-focus .crumbs { display: flex; gap: 6px; }
+  [data-page="gac"].gac-page.is-focus .crumb:hover {
+    background-color: #a0522d; /* SaddleBrown or choose your shade */
+    color: #fff; /* White text for contrast */
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  [data-page="gac"].gac-page.is-focus .divider {
+    /* display: none; */
+    width: 1px; height: 16px; background-color: #d1d5db; margin: 0 8px; 
+  }
+  
+  /* Title sizes in focus */
+  [data-page="gac"] .title-section { flex: 1; text-align: center; }
+  [data-page="gac"] .page-title1 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+  
+  
+  /* Cards should stretch across the full width in focus */
+  [data-page="gac"].gac-page.is-focus .card,
+  [data-page="gac"].gac-page.is-focus .source-card,
+  [data-page="gac"].gac-page.is-focus .card.card-source {
+    width: 100%;
+    box-shadow: 0 2px 10px rgba(16,24,40,0.06);
+    border-radius: 12px;
+  }
+  
+  
+  [data-page="gac"].gac-page.is-focus .editor-wrap.full-frame.neutral,
+  [data-page="gac"].gac-page.is-focus .segments-wrap {
+    min-height: 46vh;
+    padding: 12px;
+    background: #f8fbff;
+    border-radius: 10px;
+  }
+  
+  [data-page="gac"].gac-page.is-focus .content-editor {
+    min-height: 360px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  
+  /* Footer CTA aligned to content width */
+  [data-page="gac"].gac-page.is-focus .sticky-footer {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 0;
+    background: linear-gradient(to bottom, rgba(249, 251, 255, 0), #f9fbff 80%);
+  }
+  [data-page="gac"].gac-page.is-focus .primary-cta {
+    max-width: 1357px;
+    margin: 0 auto;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 700;
+    background: #1f7aec;
+    color: #fff;
+    border: none;
+  }
+  
+  
+  
+  /* ===========================
+     Source Content card (scoped)
+     =========================== */
+     [data-page="gac"] .card.card-source {
+      border: 1px solid #e6e8eb;              /* light neutral border */
+      border-radius: 12px;                     /* rounded corners like screenshot */
+      background: #ffffff;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06); /* very subtle shadow */
+      padding: 16px;                           /* inner spacing */
+    }
+    
+    /* Header: title + subtitle exactly like the reference */
+   
+
+    [data-page="gac"] .card.card-source .card-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: -20px;
+      }
+      
+      [data-page="gac"] .card.card-source .header-left {
+        display: flex;
+        flex-direction: column;
+      }
+      
+  
+    
+    [data-page="gac"] .card.card-source .card-title {
+      margin: 0;
+      font-size: 16px;                         /* “Source Content” size */
+      font-weight: 700;
+      color: #111827;                          /* slate-900ish */
+      margin-left: -134px;
+    }
+    
+    [data-page="gac"] .card.card-source .card-sub {
+      margin: 4px 0 0;
+      /* margin:52px -124px 0; */
+      font-size: 13px;
+      color: #6b7280;                          /* slate-500ish */
+    }
+    
+    /* Pill-style tab bar container (soft blue background, rounded) */
+    [data-page="gac"] .card.card-source .tabs-bar.content-tabs {
+      margin: 12px 0;
+      background: transparent;                 /* the pill itself carries bg */
+      border: none;
+      padding: 0;
+    }
+    
+    [data-page="gac"] .card.card-source .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;          /* two equal tabs */
+      gap: 8px;                                /* small gap like screenshot */
+    }
+    
+    /* The pill wrapper effect: create the pill track behind tabs */
+    /* [data-page="gac"] .card.card-source .tabs::before {
+      content: "";
+      grid-column: 1 / -1;
+      grid-row: 1;
+      background: #f1f5f9;                     
+      border: 1px solid #e6e8eb;
+      border-radius: 8px;                      
+      height: 36px;                            
+      position: relative;
+      z-index: 0;                            
+    } */
+    
+    /* Tab buttons */
+    [data-page="gac"] .card.card-source .tab {
+      position: relative;
+      /* z-index: 1;                              */
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: #eef2f7;                     /* inactive: very soft blue */
+      color: #475467;                          /* medium gray/blue text */
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    }
+    
+    /* Active tab: white pill with a subtle border & inset shadow */
+    [data-page="gac"] .card.card-source .tab.is-active {
+      background: #ffffff;
+      color: #111827;
+      border-color: #e6e8eb;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03) inset;
+    }
+    
+    /* Hover effect (optional, subtle) */
+    [data-page="gac"] .card.card-source .tab:hover {
+      filter: brightness(1.02);
+    }
+    
+    /* Card body area: remove extra padding so the editor looks tucked under tabs */
+    [data-page="gac"] .card.card-source .card-body {
+      padding: 0;
+      margin-top: -12px;
+    }
+    
+    /* Editor container panel (rounded, bordered, white) */
+    [data-page="gac"] .card.card-source .editor-wrap.full-frame.neutral {
+      border: 1px solid #e6e8eb;
+      border-radius: 10px;
+      background: #ffffff;
+      min-height: 240px;                       
+      padding: 10px;                         
+    }
+    
+    /* Textarea styles to match the look */
+    [data-page="gac"] .card.card-source .content-editor {
+      width: 100%;
+      min-height: 220px;
+      border: none;                             /* border comes from the wrapper */
+      outline: none;
+      resize: vertical;
+      background: transparent;
+      color: #111827;
+      font-size: 13.5px;
+      line-height: 1.5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      white-space: pre-wrap;                    /* matches screenshot’s line wrapping */
+    }
+    
+    /* Segments container should look like the editor panel when active */
+    [data-page="gac"] .card.card-source .segments-wrap {
+      border: 1px solid #e6e8eb;
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 12px;
+    }
+    
+    /* Loading + error (optional refinement for minimal footprint) */
+    [data-page="gac"] .card.card-source .seg-loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #475467;
+      font-size: 13px;
+    }
+    
+    [data-page="gac"] .card.card-source .error-banner {
+      border: 1px solid #f3c8c8;
+      background: #fff5f5;
+      color: #b42318;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    
+    /* Accessibility focus ring for tabs */
+    [data-page="gac"] .card.card-source .tab:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+      border-radius: 8px;
+    }
+    
+    
+  

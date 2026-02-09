@@ -1,54 +1,56 @@
 
 import React from 'react';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
+// import '../App.css';
+import "./css/Header.css";
 
 const PreMLRCompanion = () => {
   return (
-    <article className="mlr-card">
-      <div className="mlr-card__inner">
-        {/* Header */}
-        <div className="mlr-card__header">
-          <span className="mlr-card__icon">
-            <ShieldOutlinedIcon sx={{ fontSize: 18 }} />
-          </span>
-          <h3 className="mlr-card__title">Pre-MLR Companion</h3>
+    <article className="tool-card tool-card--mlr">
+      {/* Header */}
+      <div className="tool-card__header">
+        <span className="tool-card__icon">
+          <ShieldOutlinedIcon sx={{ fontSize: 18 }} />
+        </span>
+        <h3 className="tool-card__title">Pre-MLR Companion</h3>
+        <span className="tool-card__badge">50 Reviews Ready</span>
+      </div>
 
-          {/* Badge */}
-          <span className="mlr-card__badge">44 Reviews Ready</span>
-        </div>
-
-        {/* Description */}
-        <p className="mlr-card__desc">
+      {/* Body */}
+      <div className="tool-card__body">
+        <p className="tool-card__desc">
           AI-powered compliance checking and intelligent review preparation before MLR submission.
         </p>
 
-        {/* Metrics Grid (Empty Data for now) */}
-        <div className="mlr-card__metrics">
-          <div className="mlr-card__metric">
-            <span className="mlr-card__label">REVIEWS READY</span>
-            <span className="mlr-card__value">--</span>
+        {/* Metrics */}
+        <div className="tool-card__metrics">
+          <div className="tool-metric">
+            <p className="tool-metric__label">REVIEWS READY</p>
+            <span className="tool-metric__value">50</span>
           </div>
 
-          <div className="mlr-card__metric">
-            <span className="mlr-card__label">SUCCESS PREDICTION</span>
-            <span className="mlr-card__value">
-              -- {/* example: <span className="mlr-card__delta mlr-card__delta--up">+4%</span> */}
+          <div className="tool-metric">
+            <p className="tool-metric__label">SUCCESS PREDICTION</p>
+            <span className="tool-metric__value">
+              85% <span className="delta delta--up">+4%</span>
             </span>
           </div>
 
-          <div className="mlr-card__metric">
-            <span className="mlr-card__label">ISSUES FOUND</span>
-            <span className="mlr-card__value">--</span>
+          <div className="tool-metric">
+            <p className="tool-metric__label">ISSUES FOUND</p>
+            <span className="tool-metric__value">0</span>
           </div>
 
-          <div className="mlr-card__metric">
-            <span className="mlr-card__label">REVIEW TIME</span>
-            <span className="mlr-card__value">
-              -- {/* example: <span className="mlr-card__delta mlr-card__delta--down">-18%</span> */}
+          <div className="tool-metric">
+            <p className="tool-metric__label">REVIEW TIME</p>
+            <span className="tool-metric__value">
+              2.3d <span className="delta delta--down">-18%</span>
             </span>
           </div>
         </div>
       </div>
+
+      <div className="tool-card__footer" />
     </article>
   );
 };
