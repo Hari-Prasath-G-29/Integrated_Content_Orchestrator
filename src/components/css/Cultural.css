@@ -1,0 +1,1365 @@
+
+/* ===== Cultural Adaptation Workspace (scoped) ===== */
+/* Add className="cultural-page" to the page root wrapper to scope styles */
+
+/* ---------- App container ---------- */
+.cultural-page .tm-app {
+    background: #f9fafb;
+    color: #111827;
+  }
+  
+  /* ---------- Header ---------- */
+  
+.cultural-page .tm-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto; /* left | center | right */
+    align-items: center;
+    gap: 16px;
+    background: #fff;
+    padding: 12px 24px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  
+  
+/* Base alignment */
+.cultural-page .tm-header-left   { justify-self: start; }
+.cultural-page .tm-header-center { justify-self: center; text-align: center; }
+.cultural-page .tm-header-right  { justify-self: end; }
+
+  
+.cultural-page .tm-divider {
+    width: 1px;
+    height: 18px;
+    background: #e5e7eb;
+    margin: 0 6px;
+    display: inline-block;
+  }
+  
+  /* Breadcrumbs */
+  .cultural-page .tm-crumbs {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cultural-page .tm-crumb {
+    background: transparent;
+    border: none;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  .cultural-page .tm-crumb:hover {
+    background: #f9fafb;
+  }
+  .cultural-page .tm-crumb-sep {
+    width: 16px;
+    height: 16px;
+    color: #6b7178;
+  }
+  
+  /* Vertical divider before title (as in desired header) */
+  .cultural-page .tm-title-divider {
+    width: 1px;
+    height: 24px;
+    background: #e5e7eb;
+  }
+  
+  /* Title section */
+  .cultural-page .tm-title-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    margin-left: 50px
+  }
+  
+.cultural-page .tm-page-title {
+    margin: 0;
+    font-size: 20px;
+    /* line-height: 1.3;
+    font-weight: 800; */
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  
+  
+.cultural-page .tm-title-sub {
+    font-size: 12px;
+    color: #6b7178;
+    font-weight: 600;
+  }
+
+  .cultural-page .tm-app.is-focus .tm-page-title {
+    font-weight: 800; /* emphasize in focus */
+  }
+    
+  
+  /* Right: saved + buttons */
+  .cultural-page .tm-header-right {
+    display: inline-flex;
+  }  
+
+  
+/* Focus mode: hide sidebar but keep header centered */
+.cultural-page .tm-app.is-focus .tm-sidebar {
+    display: none;
+  }
+  .cultural-page .tm-app.is-focus .tm-main {
+    grid-template-columns: 1fr;
+  }
+
+  
+.cultural-page .tm-app.is-focus .tm-header {
+    padding: 10px 20px;
+    border-bottom-color: #eef2f7;
+  }
+
+  
+.cultural-page .tm-tabs-bar {
+    display: grid;
+    grid-template-columns: 1fr auto; /* tabs | right utilities */
+    align-items: center;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 10px 20px;
+  }
+
+  
+.cultural-page .tm-app.is-focus .tm-tabs-bar {
+    grid-template-columns: 1fr auto;
+  }
+  
+
+  
+/* Tabs Bar */
+.cultural-page .tm-tabs-bar {
+    /* display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 4px 24px;
+    gap: 24px; */
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    background: #f3f6fb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 5px 5px
+  }
+  
+  .cultural-page .tm-tabs {
+    display: flex;
+    gap: 32px;
+    background: #f3f6fb;
+  }
+  
+  .cultural-page .tm-tab {
+    /* font-size: 15px;
+    font-weight: 600;
+    color: #6b7280; 
+    background: transparent;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease; */
+    flex: 1 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 0;
+    background: transparent;
+    color: #6b7280;
+    border: none;
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .cultural-page .tm-tab.is-active {
+    /* background: #fff;
+    color: #111827;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); */
+    padding: 6px 14px;
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  }
+  
+  /* Status Row Below Tabs */
+  
+.cultural-page .tm-tabs-right {
+    display: grid;
+    grid-template-columns: auto auto auto; /* title | progress | actions */
+    align-items: center;
+    gap: 32px;
+    background: #fff;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e5e7eb;
+  
+  }
+  
+
+  .cultural-page .tm-status-left {
+    display: grid;
+    gap: 4px;
+  }
+  
+  
+  /* .cultural-page .tm-progress-inline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  } */
+  
+  /* .cultural-page .tm-progress-inline-label {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  
+  .cultural-page .tm-progress-inline-value {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .cultural-page .tm-progress-inline-bar {
+    width: 140px;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+  } */
+  
+  /* .cultural-page .tm-progress-inline-fill {
+    height: 100%;
+    background: #34d399; 
+    border-radius: 999px;
+  } */
+  
+  /* Buttons */
+  .cultural-page .tm-tabs-actions {
+    display: flex;
+    gap: 12px;
+  }
+  
+  .cultural-page .tm-btn.outline {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    color: #111827;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .cultural-page .tm-btn.primary {
+    background: #38bdf8; /* bright blue */
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  /* Workspace Header */
+  .cultural-page .tm-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  
+  .cultural-page .tm-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  .cultural-page .tm-light {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  
+  
+.cultural-page .tm-section-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+.cultural-page .tm-section-sub {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+  }
+  
+  
+.cultural-page .tm-progress-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cultural-page .tm-progress-inline-label {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  .cultural-page .tm-progress-inline-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .cultural-page .tm-progress-inline-bar {
+    width: 85px;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .cultural-page .tm-progress-inline-fill {
+    height: 100%;
+    background: #38bdf8; /* bright blue fill */
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+  
+  /* Right: Buttons */
+  .cultural-page .tm-tabs-actions {
+    display: inline-flex;
+    gap: 12px;
+  }
+  .cultural-page .tm-btn.outline {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    color: #111827;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .cultural-page .tm-btn.primary {
+    background: #38bdf8;
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  
+/* ===== Cultural Adaptation — Detail card (first-image look) ===== */
+
+/* Section label (e.g., "Source Content (English)") */
+.cultural-page .ci-section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b; /* blue label */
+  }
+  
+  /* Optional small language chip; hide if you don't want it */
+  .cultural-page .ci-lang-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 22px;
+    border-radius: 999px;
+    background: #eef3fe;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  
+  /* Soft gray source box */
+  .cultural-page .ci-source-box {
+    background: #f3f4f6;         /* light gray fill */
+    border: 1px solid #e5e7eb;   /* thin gray border */
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 15px;
+    color: #111827;
+  }
+  
+  /* Subheading row: left title + right actions */
+  .cultural-page .ci-row {
+    display: grid;
+    grid-template-columns: 1fr auto;  /* heading | button */
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  
+  /* Subheading text like "Original Translation" or "Culturally Adapted Text" */
+  .cultural-page .ci-subheading {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+  
+  /* Bright blue pill button (Analyze / Mark as Reviewed) */
+  .cultural-page .ci-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: none;
+    background: #1fb6ff;   
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+  }
+  .cultural-page .ci-pill-btn:hover {
+    background: #0ea5e9;   
+  }
+
+  
+  /* .cultural-page .ci-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: #64d3f7;           
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  transition: filter .15s ease, transform .02s ease;
+}
+
+.cultural-page .ci-pill-btn:hover { filter: brightness(0.98); } */
+.cultural-page .ci-pill-btn:active { transform: translateY(1px); }
+
+.cultural-page .ci-pill-btn.is-loading {
+  cursor: progress;
+  opacity: 0.98;
+}
+
+/* Spin animation for lucide Loader2 icon */
+.cultural-page .ci-pill-btn .spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Disabled look */
+.cultural-page .ci-pill-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+  
+  /* Textareas (plain white with thin border) */
+  .cultural-page .ci-textarea {
+    width: 100%;
+    min-height: 120px;         /* match visual height in screenshot */
+    resize: vertical;
+    border: 1px solid #e5e7eb; /* thin gray border */
+    border-radius: 12px;
+    padding: 12px;
+    background: #fff;
+    color: #111827;
+    font-size: 14px;
+    line-height: 1.4;
+    outline: none;
+  }
+  .cultural-page .ci-textarea:focus {
+    border-color: #93c5fd;     /* focus ring tint */
+    box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.35);
+  }
+  
+  /* Spacing inside the detail card */
+  .cultural-page .tm-detail {
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  
+  /* Remove the old green translated box when using the new layout */
+  .cultural-page .tm-box.translated {
+    background: transparent; /* not used in the new look */
+    border: none;
+    padding: 0;
+  }
+  
+  /* Optional: show a small inline error under the adapted area */
+  .cultural-page .tm-inline-error {
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  
+
+ /* ===== AI modal specifics ===== */
+/* .ai-modal-header .tm-chip.soft {
+  background: #f6f7fb;
+  color: #374151;
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: inline-block;
+} */
+
+
+.cultural-page .ai-modal-header .tm-chip.soft {
+  background: #f6f7fb;
+  color: #374151;
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: inline-block;
+  font-weight: 600;
+}
+
+.cultural-page .ai-summary .tm-loading {
+  padding: 8px 12px;
+}
+
+.cultural-page .ai-overall {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9fafb;
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.cultural-page .ai-overall-label {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+.cultural-page .ai-overall-score {
+  font-weight: 700;
+  font-size: 24px;
+}
+.cultural-page .ai-score-number { color: #f59e0b; } /* amber */
+.cultural-page .ai-score-total { color: #6b7280; margin-left: 2px; }
+.cultural-page .ai-status-badge {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #fff3cd; /* default soft amber */
+  border: 1px solid #ffe69c;
+}
+.cultural-page .ai-status-badge.needs-improvement {
+  background: #fff3cd;
+  border-color: #ffe69c;
+  color: #8a6d3b;
+}
+
+.cultural-page .ai-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cultural-page .ai-section {
+  border: 1px solid #e6eef6;
+  border-radius: 10px;
+  padding: 16px;
+}
+.cultural-page .ai-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.cultural-page .ai-section-score {
+  font-weight: 700;
+  color: #0ea5a5; /* teal-ish */
+}
+
+/* Issue card styling */
+.cultural-page .ai-issue-card {
+  border: 2px solid #cce7f3;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 8px 0 12px 0;
+  background: #f8fdff;
+}
+.cultural-page .ai-issue-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+.cultural-page .ai-issue-priority {
+  display: inline-block;
+}
+.cultural-page .ai-issue-block {
+  margin: 6px 0;
+}
+.cultural-page .ai-issue-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+.cultural-page .ai-issue-content {
+  font-size: 14px;
+}
+
+.cultural-page .ai-issue-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cultural-page .ai-strengths {
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 10px;
+}
+.cultural-page .ai-strengths-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.cultural-page .ai-strengths-list {
+  padding-left: 18px;
+}
+
+/* ===== Buttons (variants used in the modal) ===== */
+/* .tm-btn {
+  border: 1px solid transparent;
+  background: #f3f4f6;
+  color: #111827;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.tm-btn.primary {
+  background: #10b981;
+  color: #fff;
+  border-color: #0fa372;
+}
+.tm-btn.outline {
+  background: #fff;
+  border-color: #d1d5db;
+  color: #111827;
+} */
+
+
+.cultural-page .tm-btn {
+  border: 1px solid transparent;
+  background: #f3f4f6;
+  color: #111827;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.cultural-page .tm-btn.primary {
+  background: #10b981;
+  color: #fff;
+  border-color: #0fa372;
+}
+.cultural-page .tm-btn.outline {
+  background: #fff;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+
+.cultural-page .tm-btn.link {
+  background: transparent;
+  color: #2563eb;
+  border: none;
+  padding: 6px 8px;
+}
+.cultural-page .tm-btn.ghost {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #334155;
+}
+.cultural-page .tm-btn.small {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+.cultural-page .tm-btn.is-loading {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* ===== Misc (if not already present in your App.css) ===== */
+.cultural-page .tm-inline-error {
+  background: #fee2e2;
+  color: #7f1d1d;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.cultural-page .tm-light {
+  color: #6b7280;
+}
+
+.cultural-page .tm-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+.cultural-page .tm-box.source {
+  background: #f9fafb;
+}
+
+.cultural-page .tm-chip {
+  display: inline-block;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.cultural-page .tm-chip.soft {
+  background: #f3f4f6;
+  color: #374151;
+}
+.cultural-page .tm-chip.success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+/* Segment list pills */
+.cultural-page .tm-seg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  background: #f9fafb;
+}
+.cultural-page .tm-seg-pill.completed {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+.cultural-page .tm-seg-pill.pending {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+.cultural-page .tm-seg-pill.neutral {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #374151;
+}
+
+.cultural-page .tm-pill-icon {
+  color: inherit;
+}
+/* .ai-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+} */
+
+.cultural-page .ai-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+/* second part of pop up 18_01 */
+
+/* =======================
+   Attached UI: Shared Card
+   ======================= */
+.cultural-page .ai-addon-card {
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.cultural-page .ai-addon-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cultural-page .ai-addon-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cultural-page .ai-addon-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cultural-page .ai-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.cultural-page .ai-score-badge {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+/* =======================
+   Approved Terms Header
+   ======================= */
+.cultural-page .ai-approved-wrap {
+  margin-top: 8px;
+}
+
+.cultural-page .ai-approved-bar {
+  background: #ecfdf5;
+  border: 1px solid #d1fae5;
+  color: #065f46;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+
+.cultural-page .ai-approved-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  background: #10b981;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.cultural-page .ai-approved-text {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.cultural-page .ai-approved-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* =======================
+   Terminology Cards
+   ======================= */
+.cultural-page .ai-term-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.cultural-page .ai-term-card {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.cultural-page .ai-term-badge-row {
+  margin-bottom: 6px;
+}
+
+.cultural-page .ai-needs-badge {
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cultural-page .ai-term-label {
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.cultural-page .ai-term-issue {
+  margin-top: 8px;
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cultural-page .ai-alt-block {
+  margin-top: 8px;
+}
+
+.cultural-page .ai-small-label {
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
+.cultural-page .ai-alt-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Selected chip affordance (works with your existing tm-chip classes) */
+.cultural-page .tm-chip.is-selected {
+  outline: 2px solid #34d399;
+  outline-offset: 1px;
+}
+
+.cultural-page .ai-term-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* =======================
+   Visual & Color Guidance
+   ======================= */
+   .cultural-page .ai-subsection {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 12px;
+}
+
+.cultural-page .ai-subtitle {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cultural-page .ai-bullet-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.cultural-page .ai-bullets {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+/* =======================
+   Modal Footer (reuses your tm-btn styles)
+   ======================= */
+.cultural-page .ai-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* Dim + blur the page behind the modal */
+/* .tm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(17, 24, 39, 0.55); 
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+} */
+
+
+/* 2) Overlay covers the viewport and captures scroll */
+.cultural-page .tm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+
+  /* Prevent scroll chaining from overlay to page */
+  overscroll-behavior: contain;
+}
+
+
+
+/* 3) Modal box should not create an outer scrollbar */
+.cultural-page .tm-modal {
+  width: 100%;
+  max-width: 880px;
+  max-height: 90vh;          
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.18), 0 4px 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;         
+  margin-top: 95px;
+}
+
+
+
+
+/* 4) Header (fixed at top of modal) */
+.cultural-page .tm-modal-header1 {
+  padding: -19px 20px 10px;
+  border-bottom: 1px solid #eef2f7;
+  background: #ffffff;
+  /* position: sticky;           */
+  top: 0;
+  z-index: 1;
+
+}
+
+/* 5) Body is the ONLY scrollable region inside the modal */
+.cultural-page .tm-modal-body {
+  padding: 18px 20px 8px;
+  flex: 1 1 auto;
+  min-height: 0;             /* critical for flex children to allow scrolling */
+  overflow: auto;
+  overscroll-behavior: contain; /* prevent scroll-through to overlay/body */
+}
+
+/* 6) Footer (fixed at bottom of modal) */
+.cultural-page .tm-modal-footer {
+  /* display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #eef2f7;
+  background: #fbfbfd; */
+  
+ position: relative;         /* stays below body, not scrolling */
+ z-index: 4;
+ background: #fbfbfd;
+ border-top: 1px solid #eef2f7;
+ padding: 12px 16px;
+
+}
+
+
+/* .tm-modal .tm-modal-footer {
+  display: none !important;
+} */
+
+/* Lock page scroll when overlay exists (no JS needed) */
+.cultural-page .body:has(.tm-modal-overlay) {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* ==== Outer modal box =================================================== */
+.cultural-page .tm-modal {
+  width: 100%;
+  max-width: 880px;
+  max-height: 90vh;              /* keep the whole modal within viewport */
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.18), 0 4px 20px rgba(0,0,0,0.1);
+  overflow: hidden;              /* no outer scroll on the modal box */
+}
+
+/* The OUTER tm-modal-body (inserted by <Modal/>) becomes a flex column shell */
+.cultural-page .tm-modal > .tm-modal-body {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;           /* respect .tm-modal max-height */
+  overflow: hidden;              /* prevent this layer from scrolling */
+}
+
+/* ==== Your INNER header/body/footer ===================================== */
+/* Header (inner) — pinned at top, above scroller */
+.cultural-page .tm-modal > .tm-modal-body > .tm-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;              /* hide scrolled content under it */
+  border-bottom: 1px solid #eef2f7;
+  /* optional subtle separation */
+  box-shadow: 0 1px 0 0 #eef2f7;
+}
+
+/* Body (inner) — the ONLY scrollable area */
+.cultural-page .tm-modal > .tm-modal-body > .tm-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;                 /* critical for flex child scrolling */
+  overflow: auto;
+  overscroll-behavior: contain;  /* stop scroll chaining to overlay/body */
+  scrollbar-gutter: stable both-edges;
+  padding: 18px 20px 8px;
+  /* Add bottom padding so last content isn't hidden behind sticky footer */
+  padding-bottom: 72px;          /* ≈ footer height; adjust if needed */
+}
+
+/* Footer (inner) — stick to the bottom, does NOT scroll away */
+.cultural-page .tm-modal > .tm-modal-body > .tm-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: #fbfbfd;
+  border-top: 1px solid #eef2f7;
+  padding: 12px 16px;
+}
+
+/* Align the 3 footer buttons to the right */
+.cultural-page .tm-modal > .tm-modal-body > .tm-modal-footer .ai-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ==== Overlay (no page scroll behind) =================================== */
+.cultural-page .tm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overscroll-behavior: contain;  /* no scroll bleed to the page */
+}
+
+/* ==== Optional: remove accidental nested scrollbars in content cards ==== */
+.cultural-page .ai-summary,
+.cultural-page .ai-section,
+.cultural-page .ai-issue-card {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+
+/* Your title is currently a "chip". Flatten it so it looks like plain text */
+.cultural-page .ai-modal-header .tm-chip.soft {
+  background: transparent !important; /* remove pill */
+  color: #0f172a !important;          /* deep slate like in screenshot */
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;                           /* space between icon and text */
+  font-weight: 600 !important;         /* heavy like the second image */
+  font-size: 1.25rem;
+    line-height: 1.75rem;
+    margin-bottom: 8px;
+}
+
+/* If you want the brain emoji to stand a tiny bit left of the text */
+.cultural-page .ai-modal-header .tm-chip.soft::before {
+  /* content: "🧠"; */
+  display: inline-block;
+  font-size: 24px;
+  line-height: 1;
+  transform: translateY(1px);          /* subtle vertical alignment */
+}
+
+.cultural-page .tm-left {
+    min-height: 480px;
+  }
+
+  .cultural-page .tm-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    padding-top: 1px;
+    padding-left: 1px;
+    padding-right: 1px;
+    padding-bottom: 1px;
+}
+
+.cultural-page .tm-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* keep right slot available */
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  
+  .cultural-page .tm-card-header-left {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+  
+  /* .cultural-page .tm-card-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+  } */
+  
+  .cultural-page .tm-seg-count {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
+  .cultural-page .tm-workspace {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 6px;
+    padding: 1px 1px 1px;
+}
+
+.cultural-page .tm-page-subtitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+  
+  .cultural-page .tm-light {
+    color: var(--muted);
+  }
+
+  .cultural-page .tm-report-header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 21px;
+    margin-top: 15px;
+}
+
+/* ---------- Change Log block ---------- */
+/* .cultural-page .tm-change-log-section {
+    margin-top: 12px;
+  } */
+  
+  .cultural-page .cultural-page .tm-change-log-label {
+    display: block;
+    font-weight: 600;
+    color: #1f2937;            /* slate-800-ish for good contrast */
+    margin-bottom: 8px;
+  }
+  
+  /* The green banner container */
+  .cultural-page .tm-change-log-banner {
+    display: flex;
+    align-items: flex-start;   /* align tick with first line of text */
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #86efac; /* green-300 */
+    background-color: #ecfdf5; /* emerald-50 / subtle green background */
+    color: #065f46;            /* emerald-800 for text inside */
+    line-height: 1.4;
+    margin-top: 8px;
+  }
+  
+  /* Tick icon styling */
+  .cultural-page .tm-change-log-tick {
+    color: #16a34a;            /* green-600 */
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1;
+    margin-top: 2px;           /* optical alignment */
+  }
+  
+  /* The text area (“Accepted: <del>from</del> → to”) */
+  .cultural-page .tm-change-log-text {
+    flex: 1;
+    font-size: 14px;
+    color: #065f46;            /* keep text green-ish */
+  }
+  
+  .cultural-page .tm-change-log-text strong {
+    color: #047857;            /* green-700 for “Accepted:” */
+    font-weight: 700;
+  }
+  
+  /* Make the struck-through “from” look lighter like the screenshot */
+  .cultural-page .tm-change-log-text del {
+    color: #6b7280;            /* gray-500 to deemphasize old text */
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;  /* bold strike like in the image */
+    text-decoration-color: #9ca3af;  /* gray-400-ish strike line */
+  }
+  
+  /* Arrow between from → to */
+  .cultural-page .tm-change-log-text .arrow {
+    padding: 0 6px;
+    color: #065f46;
+  }
+  
+  /* Round corners & outline feel, even on white backgrounds */
+  .cultural-page .tm-change-log-banner {
+    box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.15); /* subtle inner outline */
+  }
+  
+  /* Optional: compact mode if you ever render multiple entries */
+  .cultural-page .tm-change-log-banner + .tm-change-log-banner {
+    margin-top: 8px;
+  }
+  
+  /* Dark mode (optional) */
+  @media (prefers-color-scheme: dark) {
+    .cultural-page .tm-change-log-label {
+      color: #e5e7eb;
+    }
+    .cultural-page .tm-change-log-banner {
+      border-color: #166534;        /* green-800 */
+      background-color: #062e26;    /* very dark teal/green */
+      color: #bbf7d0;               /* green-200 text */
+    }
+    .cultural-page .tm-change-log-tick {
+      color: #34d399;               /* green-400 */
+    }
+    .cultural-page .tm-change-log-text strong {
+      color: #34d399;
+    }
+    .cultural-page .tm-change-log-text del {
+      color: #9ca3af;
+      text-decoration-color: #6b7280;
+    }
+  }
+  
+  /* Reduced motion (optional, in case you later add transitions) */
+  @media (prefers-reduced-motion: reduce) {
+    .cultural-page .tm-change-log-banner,
+    .cultural-page .tm-change-log-text,
+    .cultural-page .tm-change-log-tick {
+      transition: none !important;
+    }
+  }

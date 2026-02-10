@@ -1,19 +1,25 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "../App.css";
+// import "../App.css";
+import "./css/Translationhub.css";
+import {  ArrowLeft,
+  Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3,
+  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react';
+import { getProject, updateProjectMeta, markPhaseComplete, setP2DraftGenerated } from '../lib/progressStore';
+import { usePhaseNavigation } from "./PhaseNav.jsx";
 
 // --- Import the new component (Ensure file is created as TMLeverageOverview.jsx) ---
 import TMLeverageOverview from "./TMLeverageOverview";
 
 /* Sidebar phases (original list retained) */
 const SIDEBAR_PHASES = [
-  { id: 1, name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
-  { id: 2, name: "Smart TM Translation", sub: "AI-powered translation", status: "active", iconClass: "icon-translation" },
-  { id: 3, name: "Cultural Intelligence", sub: "Cultural adaptation", status: "todo", iconClass: "icon-culture" },
-  { id: 4, name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
-  { id: 5, name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
-  { id: 6, name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
-  { id: 7, name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
+  { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
+  { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "active", iconClass: "icon-translation" },
+  { id: 'P3', name: "Cultural Intelligence", sub: "Cultural adaptation", status: "todo", iconClass: "icon-culture" },
+  { id: 'P4', name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
+  { id: 'P5', name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
+  { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
+  { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
 ];
 
 /* Env helpers */
@@ -59,11 +65,12 @@ const saveTranslationToDb = async (source, target, sLang, tLang, docName) => {
 };
 
 // For quick test you can uncomment and set directly:
-// const N8N_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload";
-// const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/translateAll";
-
 const N8N_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload";
 const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload_bulk";
+
+// const N8N_WEBHOOK_URL = "http://172.16.4.237:8015/webhook-test/csv_upload";
+// const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8015/webhook-test/csv_upload_bulk";
+// const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8015/webhook-test/translateAll";
 
 const N8N_AUTH =
   ENV.REACT_APP_N8N_TOKEN ||
@@ -131,6 +138,8 @@ function normalizeOutputMap(outputObj) {
       byKey[`segment-${ix}`] = val;        // "segment-1"
       byKey[`seg ${ix}`] = val;            // "seg 1"
       byKey[`Seg ${ix}`] = val;            // "Seg 1"
+      byKey[`segment${ix}`] = val;   // no-space
+      byKey[`Segment${ix}`] = val;   // no-space PascalCase
     }
   }
   return byKey;
@@ -149,6 +158,8 @@ function keyVariantsForSegment(seg) {
     `segment-${ix}`,
     `seg ${ix}`,
     `Seg ${ix}`,
+    `segment${ix}`,
+    `Segment${ix}`,
     id.toLowerCase(),
     ix.toLowerCase(),
   ];
@@ -317,7 +328,8 @@ function DraftPanel({
 
   const [openIds, setOpenIds] = useState(new Set());
   useEffect(() => {
-    setOpenIds(new Set(normalized.map((s) => s.id)));
+    // setOpenIds(new Set(normalized.map((s) => s.id)));
+    setOpenIds(new Set());
   }, [normalized]);
 
   const isOpen = (id) => openIds.has(id);
@@ -371,18 +383,19 @@ function DraftPanel({
       {/* Header strip */}
       <div className="dt-header-strip">
         <div className="dt-header-left">
-          <h2 className="dt-title">Complete Draft Translation</h2>
+          <h2 className="dt-title"> <FileText size={19} className="h-5 w-5 text-emerald-600 ml-2" />Complete Draft Translation</h2>
           <div className="dt-subtitle">
             {totalSegments} segments • {totalWords} words • {tmLeveragePct}% TM leverage
           </div>
-          <div className="dt-subtitle dt-muted">
+          {/* <div className="dt-subtitle dt-muted">
             {projectName} &nbsp;&middot;&nbsp; {therapyArea} &nbsp;&middot;&nbsp; {inboundLang}
-          </div>
+          </div> */}
         </div>
         <div className="dt-header-actions">
-          <button className="dt-btn outline" onClick={handleCopyToClipboard}>Copy to Clipboard</button>
-          <button className="dt-btn outline" onClick={handleDownloadAsText}>Download as Text</button>
-          <button className="dt-btn primary" onClick={() => onSendToCI(normalized)}>Send to Cultural Intelligence</button>
+          <button className="dt-btn outline py-2 px-4" onClick={handleCopyToClipboard}>Copy to Clipboard</button>
+          <button className="dt-btn outline py-2 px-4" onClick={handleDownloadAsText}>Download as Text</button>
+          <button className="dt-btn primary" onClick={() => onSendToCI(normalized)}>
+          <ArrowRight size={15} className="h-4 w-4 mr-2" />Send to Cultural Intelligence</button>
         </div>
       </div>
 
@@ -438,7 +451,9 @@ function DraftPanel({
         {/* Right metadata */}
         <aside className="dt-right">
           <div className="dt-meta-card">
-            <h4 className="dt-meta-title">Translation Metadata</h4>
+          <h4 className="dt-meta-title">
+            <BarChart3 size={19} className="h-4 w-4" />
+              Translation Metadata</h4>
 
             <div className="dt-meta-percentage-card">
               <div className="dt-meta-percentage">{tmLeveragePct}%</div>
@@ -476,10 +491,68 @@ export default function SmartTMTranslationHub({
   projectName: projectNameProp = "No project name to display",
   therapyArea = "Respiratory · DE",
   progressWords: progressWordsProp = { done: 0, total: 333 },
-  segments: segmentsProp = "No Segments to display",
+  // segments: segmentsProp = "No Segments to display",
+  segments: segmentsProp = null,
 }) {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const projectId = state?.projectId;
+
+  const projectRec = React.useMemo(() => getProject(projectId), [projectId]);
+
+// 🔁 Restore "draft generated" flag (from meta or localStorage)
+const draftGeneratedPersisted = !!(
+    projectRec?.meta?.p2DraftGenerated ||
+    localStorage.getItem(`p2_draft_generated_${projectId}`) === "true"
+  );
+  
+  // Ensure Draft tab is unlocked if the persisted flag exists
+  useEffect(() => {
+    if (draftGeneratedPersisted) {
+      setIsDraftUnlocked(true);
+      setShowGenerateDraft(false);
+    }
+}, [draftGeneratedPersisted]);
+  
+
+const persistedSegmentsP2 = React.useMemo(
+    () => (projectRec?.meta?.segmentsP2 && Array.isArray(projectRec.meta.segmentsP2))
+          ? projectRec.meta.segmentsP2
+          : [],
+    [projectRec]
+  );
+  
+   const persistedSegmentsP1 = React.useMemo(
+     () => (projectRec?.meta?.segmentsP1 && Array.isArray(projectRec.meta.segmentsP1))
+           ? projectRec.meta.segmentsP1
+           : [],
+     [projectRec]
+   );
+
+  const [isEditingTranslation, setIsEditingTranslation] = useState(false);
+  // Toggle handler
+ const [isFocusMode, setIsFocusMode] = useState(() => {
+  // restore from localStorage on mount
+  const v = localStorage.getItem('tm_focus_mode');
+  return v === 'true';
+});
+const toggleFocusMode = () => setIsFocusMode(prev => !prev);
+
+// persist on change
+useEffect(() => {
+  localStorage.setItem('tm_focus_mode', String(isFocusMode));
+}, [isFocusMode]);
+
+// keyboard: F to focus, Esc to exit
+useEffect(() => {
+  const onKey = (e) => {
+    const k = String(e.key || '').toLowerCase();
+    if (k === 'f') setIsFocusMode(true);
+    if (k === 'escape') setIsFocusMode(false);
+  };
+  window.addEventListener('keydown', onKey);
+  return () => window.removeEventListener('keydown', onKey);
+}, []);
 
   /** Tabs */
   const [activeTab, setActiveTab] = useState("workspace");
@@ -489,16 +562,65 @@ export default function SmartTMTranslationHub({
 
   /** Language passed from previous page */
   const inboundLang = state?.lang ?? "EN";
+  const gotoPhase = usePhaseNavigation(projectId, projectName);
 
   /** Normalize incoming segments */
+  // const segments = useMemo(() => {
+  //   const raw = Array.isArray(state?.segments)
+  //     ? state.segments
+  //     : Array.isArray(segmentsProp)
+  //     ? segmentsProp
+  //     : [];
+
+  //   return (raw || [])
+  //     .map((seg, i) => {
+  //       const index = typeof seg.index === "number" ? seg.index : i + 1;
+  //       const source = String(seg.source ?? "");
+  //       const translated = String(seg.translated ?? "");
+  //       const words =
+  //         typeof seg.words === "number"
+  //           ? seg.words
+  //           : source.split(/\s+/).filter(Boolean).length;
+
+  //       return {
+  //         id: seg.id ?? `seg-${index}`,
+  //         index,
+  //         source,
+  //         translated,
+  //         words,
+  //         status: seg.status ?? (translated.trim() ? "Completed" : "Pending"),
+  //         lang: seg.lang ?? inboundLang,
+  //       };
+  //     })
+  //     .filter((s) => s.source.trim().length > 0)
+  //     .sort((a, b) => a.index - b.index);
+  // }, [state?.segments, segmentsProp, inboundLang]);
+
   const segments = useMemo(() => {
-    const raw = Array.isArray(state?.segments)
-      ? state.segments
-      : Array.isArray(segmentsProp)
+    // const raw = Array.isArray(state?.segments)
+    //   ? state.segments
+    //   : Array.isArray(segmentsProp)
+    //   ? segmentsProp
+    //   : [];
+
+// ✅ Prefer location.state.segments; fallback to persisted P1 segments
+    //  const raw = Array.isArray(state?.segments)
+    //    ? state.segments
+    //    : (Array.isArray(segmentsProp) ? segmentsProp : persistedSegments);
+    
+const rawCandidate =
+    (Array.isArray(state?.segments) && state.segments.length > 0)
+      ? state.segments     
+      : (Array.isArray(persistedSegmentsP2) && persistedSegmentsP2.length > 0)
+      ? persistedSegmentsP2
+      : (Array.isArray(persistedSegmentsP1) && persistedSegmentsP1.length > 0)
+      ? persistedSegmentsP1
+      : (Array.isArray(segmentsProp) && segmentsProp.length > 0)
       ? segmentsProp
       : [];
 
-    return (raw || [])
+
+    return (rawCandidate || [])
       .map((seg, i) => {
         const index = typeof seg.index === "number" ? seg.index : i + 1;
         const source = String(seg.source ?? "");
@@ -515,12 +637,15 @@ export default function SmartTMTranslationHub({
           translated,
           words,
           status: seg.status ?? (translated.trim() ? "Completed" : "Pending"),
+          // 🆕 Default each segment's lang to inboundLang if not present
           lang: seg.lang ?? inboundLang,
         };
       })
       .filter((s) => s.source.trim().length > 0)
       .sort((a, b) => a.index - b.index);
-  }, [state?.segments, segmentsProp, inboundLang]);
+  // }, [state?.segments, segmentsProp, inboundLang]);
+// }, [state?.segments, segmentsProp, persistedSegmentsP1, inboundLang]);
+}, [state?.segments, segmentsProp, persistedSegmentsP1, persistedSegmentsP2, inboundLang]);
 
   /** Selected segment */
   const [selectedId, setSelectedId] = useState(null);
@@ -545,6 +670,27 @@ export default function SmartTMTranslationHub({
 
   /** Success banner → Generate Draft Translation */
   const [showGenerateDraft, setShowGenerateDraft] = useState(false);
+
+  // 🚦 Draft tab lock: disabled until user clicks "Generate Draft Translation"
+const [isDraftUnlocked, setIsDraftUnlocked] = useState(false);
+
+/** Are ALL segments completed (has real text or explicit status=Completed)? */
+const allSegmentsCompleted = useMemo(() => {
+  if (segments.length === 0) return false;
+  return segments.every((s) => {
+    const o = segOverrides[s.id];
+    const translated = (o?.translated ?? s.translated ?? "").trim();
+    const status = (o?.status ?? s.status) || (translated ? "Completed" : "Pending");
+    // treat only real (non-placeholder) translations as completed
+    return (translated.length > 0 && translated !== "— Awaiting translation —") || status === "Completed";
+  });
+}, [segments, segOverrides]);
+
+/** Show success banner only when all complete AND draft is still locked */
+useEffect(() => {
+    const canShow = allSegmentsCompleted && !isDraftUnlocked && !draftGeneratedPersisted;
+    setShowGenerateDraft(canShow);
+  }, [allSegmentsCompleted, isDraftUnlocked, draftGeneratedPersisted]);
 
   /** Draft state for same-page tab */
   const [draftSegments, setDraftSegments] = useState([]);
@@ -623,16 +769,46 @@ export default function SmartTMTranslationHub({
   };
 
   /** Complete Phase */
+  // const handleCompletePhase = () => {
+  //   const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+  //   navigate("/culturalAdaptationWorkspace", {
+  //     state: {
+  //       projectName,
+  //       segments: mergedSegments,
+  //       lang: inboundLang,
+  //     },
+  //   });
+  // };
+
+  /** Complete Phase → go to Cultural Adaptation (preserving translated text) */
   const handleCompletePhase = () => {
-    const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+    // Merge translated/status overlays (from n8n) into base segments
+    // const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+    
+const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides).map(s => ({
+  ...s,
+ tmStatus: (s.translated?.trim() ? "Completed" : "Pending"),
+ ciStatus: "Pending", // always start P3 as pending
+}));
+
+   // ✅ Persist P2 outputs for downstream resume
+   updateProjectMeta(projectId, { segmentsP2: mergedSegments });
+
+   const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+   console.log('DB meta.segmentsP2', db[projectId]?.meta?.segmentsP2);
+   
+    markPhaseComplete(projectId, 'P2');     
     navigate("/culturalAdaptationWorkspace", {
       state: {
+        projectId,
         projectName,
-        segments: mergedSegments,
+        segments: mergedSegments, // ✅ entire segments list, with translated content included
+        // 🆕 propagate lang
         lang: inboundLang,
       },
     });
   };
+
 
   // /** Single segment translate (kept, via single endpoint if you need it) */
   // const handleAiTranslate = async () => {
@@ -945,12 +1121,13 @@ export default function SmartTMTranslationHub({
 
     if (pending.length === 0) {
       // Already translated → show draft tab (hide banner on draft)
-      const mergedSegmentsNow = mergeSegmentsWithOverrides(segments, segOverrides);
-      setDraftSegments(mergedSegmentsNow);
-      setTmLeveragePct(0);
-      setDraftPrepared(true);
-      setActiveTab("draft");
-      setShowGenerateDraft(false); // HIDE banner when switching to draft
+      // const mergedSegmentsNow = mergeSegmentsWithOverrides(segments, segOverrides);
+      // setDraftSegments(mergedSegmentsNow);
+      // setTmLeveragePct(0);
+      // setDraftPrepared(true);
+      // setActiveTab("draft");
+      // setShowGenerateDraft(false); 
+      setShowGenerateDraft(allSegmentsCompleted && !isDraftUnlocked);
       return;
     }
 
@@ -1043,12 +1220,16 @@ export default function SmartTMTranslationHub({
       });
 
       // Prepare and switch to 'draft' tab with merged segments (hide banner)
-      const mergedSegmentsFinal = mergeSegmentsWithOverrides(segments, locallyMergedOverrides);
-      setDraftSegments(mergedSegmentsFinal);
-      setTmLeveragePct(0);
-      setDraftPrepared(true);
-      setActiveTab("draft");
-      setShowGenerateDraft(false); // HIDE banner when switching to draft
+      // const mergedSegmentsFinal = mergeSegmentsWithOverrides(segments, locallyMergedOverrides);
+      // setDraftSegments(mergedSegmentsFinal);
+      // setTmLeveragePct(0);
+      // setDraftPrepared(true);
+      // setActiveTab("draft");
+      // setShowGenerateDraft(false); 
+      
+// Do NOT auto-switch to Draft; just show the "Generate Draft Translation" banner
+setShowGenerateDraft(true);
+
     } catch (err) {
       setTranslationError(err.message || "Bulk translation failed.");
       setBulkProgress((bp) => ({ ...bp, failed: bp.total - bp.done }));
@@ -1058,29 +1239,81 @@ export default function SmartTMTranslationHub({
   };
 
   /** Generate Draft Translation → switch to Draft tab on the same page (hide banner) */
-  const handleGenerateDraftTranslation = () => {
-    const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
-    setDraftSegments(mergedSegments);
-    setTmLeveragePct(0);
-    setDraftPrepared(true);
-    setActiveTab("draft");
-    setShowGenerateDraft(false); // HIDE banner on draft
-  };
+  // const handleGenerateDraftTranslation = () => {
+  //   const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+  //   setDraftSegments(mergedSegments);
+  //   setTmLeveragePct(0);
+  //   setDraftPrepared(true);
+  //   setActiveTab("draft");
+  //   setShowGenerateDraft(false); 
+  // };
+
+  /** Generate Draft Translation → switch to Draft tab and unlock it */
+const handleGenerateDraftTranslation = () => {
+  const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+  setDraftSegments(mergedSegments);
+  setTmLeveragePct(0);
+  setDraftPrepared(true);
+  setIsDraftUnlocked(true);       // 🔓 unlock Draft tab
+  setActiveTab("draft");          // go to Draft tab
+  setShowGenerateDraft(false);    // hide the success banner
+   
+  // ✅ Persist "draft generated" so it survives navigation/refresh
+  // try {
+  //   updateProjectMeta(projectId, {
+  //     segmentsP2: mergedSegments,           
+  //     p2DraftGeneratedAt: new Date().toISOString(),
+  //     p2DraftGenerated: true,
+  //   });
+  // } catch (e) {
+  //   console.warn("Failed to persist draft generated flag", e);
+  // }
+   setP2DraftGenerated(projectId, true, { segmentsP2: mergedSegments });
+  // Optional localStorage fallback (project-scoped key)
+  localStorage.setItem(`p2_draft_generated_${projectId}`, "true");
+};
 
   /** Send to CI (from Draft panel) */
+  // const handleSendToCI = (normalizedDraftSegments) => {
+  //   navigate("/culturalAdaptationWorkspace", {
+  //     state: {
+  //       projectName,
+  //       segments: normalizedDraftSegments,
+  //       lang: inboundLang,
+  //       therapyArea,
+  //     },
+  //   });
+  // };
+  /** Send to CI (from Draft panel) */
   const handleSendToCI = (normalizedDraftSegments) => {
-    navigate("/culturalAdaptationWorkspace", {
-      state: {
-        projectName,
-        segments: normalizedDraftSegments,
-        lang: inboundLang,
-        therapyArea,
-      },
-    });
-  };
+    
+    // Persist P2 + "draft generated" flag before leaving
+    // try {
+    //   updateProjectMeta(projectId, {
+    //     segmentsP2: normalizedDraftSegments,
+    //     p2DraftGenerated: true,
+    //     p2DraftGeneratedAt: new Date().toISOString(),
+    //   });
+    // } catch (e) {
+    //   console.warn('Failed to persist segmentsP2 before sending to CI', e);
+    // }
+    setP2DraftGenerated(projectId, true, { segmentsP2: normalizedDraftSegments });
+    localStorage.setItem(`p2_draft_generated_${projectId}`, "true");
+    markPhaseComplete(projectId, 'P2');    
+      navigate("/culturalAdaptationWorkspace", {
+        state: {
+          projectId,
+          projectName,
+          segments: normalizedDraftSegments,
+          lang: inboundLang,
+          therapyArea,
+          fromDraft: true, // optional: for any additional UX control on CI
+        },
+      });
+    };
 
   return (
-    <div className="tm-app">
+    <div className={`tm-app ${isFocusMode ? 'is-focus' : ''}`} data-page="tm">
       {/* Sidebar */}
       <aside className="tm-sidebar">
         <div className="tm-sidebar-progress">
@@ -1100,7 +1333,8 @@ export default function SmartTMTranslationHub({
               key={p.id}
               className={`tm-phase-item ${p.status} ${p.status === "active" ? "is-active" : ""}`}
               aria-label={`Open ${p.name}`}
-              onClick={() => handlePhaseClick(p.name)}
+              // onClick={() => handlePhaseClick(p.name)}
+              onClick={() => gotoPhase(p.id)}
             >
               <span className={`tm-phase-icon ${p.iconClass}`} />
               <span className="tm-phase-text">
@@ -1114,67 +1348,92 @@ export default function SmartTMTranslationHub({
         </nav>
       </aside>
 
-      {/* Main */}
+  {/* Main */}
       <div className="tm-main">
         {/* Header */}
-        <header className="tm-header">
-          <div className="tm-header-left">
-            <div className="tm-crumbs">
-              <button className="tm-crumb">Main Hub</button>
-              <svg className="tm-crumb-sep" viewBox="0 0 24 24" aria-hidden>
-                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" fill="none" />
-              </svg>
-              <button className="tm-crumb">Glocalization Hub</button>
-            </div>
+        <header className="tm-header py-3 px-4">
+      <div className="tm-crumbs">
+          <button className="tm-crumb" onClick={() => navigate('/')}>
+          <ArrowLeft size={14} className="h-1 w-1 mr-2" /> Main Hub
+          </button>
+          <span className="tm-divider"></span>
+          <button className="tm-crumb" onClick={() => navigate('/glocalizationHub')}>
+            Glocalization Hub
+          </button>
+        </div>
+      {/* Center: Title */}
+        <div className="tm-title-section">
+          <h1 className="tm-page-title">{projectName}</h1>
+          {/* <span className="tm-title-sub">{therapyArea}</span> */}
+        </div>
+            
+      {/* Right: Saved + Buttons */}
+        <div className="tm-header-right">
+          <span className="tm-saved"> <CheckCircle2 size={12} className="h-1 w-1 text-green-600" />
+          Saved</span>
+          <button className="tm-btn-outline">
+          <Save size={15} className="h-4 w-4 mr-2" /> Save
+          </button>
+          
+<button
+              className="tm-btn-outline"
+              onClick={toggleFocusMode}
+              aria-pressed={isFocusMode}
+              title={isFocusMode ? 'Exit focus (Esc)' : 'Enter focus (F)'}
+            >
+              {isFocusMode ? (
+                <>
+                  <Minimize2 size={16} /> Exit
+                </>
+              ) : (
+                <>
+                  <Maximize2 size={16} /> Focus
+                </>
+              )}
+            </button>
 
-            <div className="tm-title-row">
-              <h1 className="tm-page-title">{projectName}</h1>
-              <span className="tm-title-sub">{therapyArea}</span>
-            </div>
-          </div>
-
-          <div className="tm-header-right">
-            <span className="tm-saved">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M5 13l4 4L19 7"
-                  stroke="#1F7AEC"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Saved
-            </span>
-            <button className="tm-btn ghost">Save</button>
-            <button className="tm-btn ghost">Focus</button>
-          </div>
-        </header>
+        </div>
+      </header>
 
         {/* Top tabs bar */}
         <section className="tm-tabs-bar">
-          <div className="tm-tabs">
-            <button
-              className={`tm-tab ${activeTab === "workspace" ? "is-active" : ""}`}
-              onClick={() => setActiveTab("workspace")}
-            >
-              Translation Workspace
-            </button>
-            <button
-              className={`tm-tab ${activeTab === "draft" ? "is-active" : ""}`}
-              onClick={() => setActiveTab("draft")}
-            >
-              Draft Translation
-            </button>
-            <button
-              className={`tm-tab ${activeTab === "tm" ? "is-active" : ""}`}
-              onClick={() => setActiveTab("tm")}
-            >
-              TM Leverage Overview
-            </button>
-          </div>
+  <div className="tm-tabs">
+    <button
+      className={`tm-tab ${activeTab === 'workspace' ? 'is-active' : ''}`}
+      onClick={() => setActiveTab('workspace')}
+    >
+      <FileText className="tm-tab-icon" />
+      Translation Workspace
+    </button>
 
-          <div className="tm-tabs-right">
+    {/* <button
+      className={`tm-tab ${activeTab === 'draft' ? 'is-active' : ''}`}
+      onClick={() => setActiveTab('draft')}
+    >
+      <CheckCircle className="tm-tab-icon" />
+      Draft Translation
+    </button> */}
+
+    <button
+  className={`tm-tab ${activeTab === 'draft' ? 'is-active' : ''} ${!isDraftUnlocked ? 'is-disabled' : ''}`}
+  onClick={() => isDraftUnlocked && setActiveTab('draft')}
+  disabled={!isDraftUnlocked}
+  title={isDraftUnlocked ? 'Open Draft Translation' : 'Generate Draft Translation to open'}
+>
+  <CheckCircle className="tm-tab-icon" />
+  Draft Translation
+</button>
+
+    <button
+      className={`tm-tab ${activeTab === 'tm' ? 'is-active' : ''}`}
+      onClick={() => setActiveTab('tm')}
+    >
+      <TrendingUp className="tm-tab-icon" />
+      TM Leverage Overview
+    </button>
+  </div>
+
+          {/* <div className="tm-tabs-right">
             <div className="tm-progress-inline">
               <span className="tm-progress-inline-label">Progress:</span>
               <span className="tm-progress-inline-value">
@@ -1198,7 +1457,7 @@ export default function SmartTMTranslationHub({
                 Complete Phase
               </button>
             </div>
-          </div>
+          </div> */}
         </section>
 
         {/* Success banner (HIDDEN when on Draft tab) */}
@@ -1228,198 +1487,425 @@ export default function SmartTMTranslationHub({
 
         {/* Workspace tab */}
         {activeTab === "workspace" && (
-          <section className="tm-workspace">
-            {/* Left card: Segments list */}
-            <div className="tm-card tm-left">
-              <div className="tm-card-header">
-                <h3 className="tm-card-title">Segments</h3>
-                <span className="tm-light">{segments.length} items</span>
-              </div>
-
-              <div className="tm-seg-list">
-                {segments.map((seg) => {
-                  const isSelected = seg.id === selectedId;
-                  const o = segOverrides[seg.id];
-                  const mergedStatus = o?.status ?? seg.status;
-                  const statusClass =
-                    mergedStatus === "Pending"
-                      ? "pending"
-                      : mergedStatus === "Completed"
-                      ? "completed"
-                      : "neutral";
-
-                return (
-                  <button
-                    key={seg.id}
-                    className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
-                    onClick={() => setSelectedId(seg.id)}
-                    aria-label={`Open Segment ${seg.index}`}
-                  >
-                    <div className="tm-seg-item-top">
-                      <span className={`tm-seg-pill ${statusClass}`}>Segment {seg.index}</span>
-                      <span className="tm-seg-state">{mergedStatus}</span>
-                    </div>
-                    <div className="tm-seg-snippet">{seg.source}</div>
-                    <div className="tm-seg-meta-row">
-                      <span className="tm-seg-meta">{seg.words} words</span>
-                    </div>
-                  </button>
-                );
-                })}
-                {segments.length === 0 && (
-                  <div className="tm-empty">No segment present to display.</div>
-                )}
-              </div>
+              <div>
+              <section className="tm-page-heading">
+    <div>
+      <h2 className="tm-section-title">Smart TM Translation Hub</h2>
+      <p className="tm-section-sub">AI-powered translation with Translation Memory leverage</p>
+    </div>
+  
+    <div className="tm-heading-right">
+      {/* Reuse the same inline progress and actions, or keep empty if you prefer only the tabs bar showing them. */}
+      <div className="tm-progress-inline">
+        <span className="tm-progress-inline-label">Progress:</span>
+        <span className="tm-progress-inline-value">
+          {progressWords.done} / {progressWords.total} words
+        </span>
+        <div className="tm-progress-inline-bar">
+          <div
+            className="tm-progress-inline-fill"
+            style={{ width: `${Math.min(progressPct, 100)}%` }}
+          />
+        </div>
+      </div>
+  
+      <div className="tm-actions">
+        {/* <button className="tm-btn-outline"> <Languages size={14} className="h-4 w-4 mr-2" /> Translate All</button> */}
+        <button
+                  className={`tm-btn outline ${isBulkTranslating ? "is-loading" : ""}`}
+                  onClick={handleTranslateAllClick}
+                  disabled={isBulkTranslating}
+                >
+                  <Languages size={14} className="h-4 w-4 mr-2" />
+                  {isBulkTranslating ? "Translating all…" : "Translate All"}
+                </button>
+        <button className="tm-btn-primary" onClick={handleCompletePhase}><CheckCircle2 size={14} className="h-4 w-4 mr-2" />Complete Phase</button>
+      </div>
+    </div>
+  </section>
+  <section className="tm-workspace">
+          {/* Left card: Segments list (unchanged) */}
+          <div className="tm-card tm-left">
+            <div className="tm-card-header">
+              <h3 className="tm-card-title">Segments</h3>
+              <span className="tm-light">{segments.length} items</span>
             </div>
 
-            {/* Right column: Action + Detail cards */}
-            <div className="tm-right-column">
-              {/* ACTION CARD */}
-              <div className="tm-card tm-action-card">
-                <div className="tm-card-header">
-                  <div className="tm-action-title">
-                    <h3 className="tm-card-title">TM Leverage</h3>
-                    <div className="tm-card-subset">
-                      <span className="tm-light">
-                        AI will use Translation Memory for consistency and cost savings
-                      </span>
-                    </div>
-                  </div>
-                  <label className="tm-switch" aria-label="Toggle TM Leverage">
-                    <input
-                      type="checkbox"
-                      checked={tmLeverageOn}
-                      onChange={(e) => setTmLeverageOn(e.target.checked)}
-                    />
-                    <span className="tm-slider" />
-                  </label>
-                </div>
+            <div className="tm-seg-list">
+              {segments.map((seg) => {
+                const isSelected = seg.id === selectedId;
+                
+// ✅ Use overrides if present
+    const o = segOverrides[seg.id];
+    const mergedStatus = o?.status ?? seg.status;
 
-                <div className="tm-action-buttons">
-                  <button
-                    className={`tm-btn primary small ${isTranslating ? "is-loading" : ""}`}
-                    onClick={handleAiTranslate}
-                    disabled={!selected || isTranslating}
-                    title="Translates the selected segment via single endpoint"
-                  >
-                    {isTranslating ? "Translating…" : "AI Translate"}
-                  </button>
-
-                  <button
-                    className="tm-btn outline small"
-                    onClick={handleCompleteSegment}
-                    disabled={!selected}
-                  >
-                    Complete
-                  </button>
-                </div>
-
-                {translationError && (
-                  <div className="tm-inline-error" role="alert">{translationError}</div>
-                )}
-                {!isDetailEnabled && selected && (
-                  <div className="tm-inline-hint">
-                    After translation, the detail card with Source/Translated will enable below.
-                  </div>
-                )}
-              </div>
-
-              {/* DETAIL CARD */}
-              <div
-                className={`tm-card tm-detail-card ${isDetailEnabled ? "" : "is-disabled"}`}
-                aria-disabled={!isDetailEnabled}
-              >
-                {!isDetailEnabled && (
-                  <div className="tm-detail-overlay">
-                    <div className="tm-overlay-content">
-                      <div className="tm-overlay-title">Waiting for translation…</div>
-                      <div className="tm-overlay-sub">
-                        Click <strong>AI Translate</strong> above, or use <strong>Translate All</strong>.
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="tm-card-header">
-                  <h3 className="tm-card-title">Section {selectedResolved?.index ?? 1}</h3>
-                  <div className="tm-card-subset">
-                    <span className="tm-light">body</span>
-                  </div>
-                </div>
-
-                {!selected && (
-                  <div className="tm-empty large">
-                    Select a segment from the left to view Source &amp; Translated text.
-                  </div>
-                )}
-
-                {selected && (
-                  <div className="tm-detail">
-                    <div className="tm-detail-row">
-                      <div className="tm-detail-row-left">
-                        <span className="tm-chip soft">Source Text</span>
-                      </div>
-                      <div className="tm-detail-row-right">
-                        <span className="tm-lang-chip">{selectedResolved?.lang || inboundLang || "EN"}</span>
-                      </div>
-                    </div>
-                    <div className="tm-box source">{selectedResolved?.source || ""}</div>
-
-                    <div className="tm-detail-actions">
-                      <button className="tm-btn outline small" disabled={!isDetailEnabled}>
-                        Edit Translation
-                      </button>
-                    </div>
-
-                    <div className="tm-chip success">Translated Text</div>
-                    <div className="tm-box translated">
-                      {isDetailEnabled
-                        ? (selectedResolved?.translated || "")
-                        : <span className="tm-light">— Awaiting translation —</span>}
-                    </div>
-
-                    <div className="tm-detail-tools">
-  <span className="tm-light">
-    {/* This pulls the actual percentage from the state  */}
-    TM {tmMatchInfo[selectedResolved?.id] || 0}%
-  </span>
-
-  <div className="tm-detail-spacer" />
-
-  <button className="tm-btn link small" disabled={!isDetailEnabled}>
-    Locked
-  </button>
-
+                // const statusClass =
+                //   seg.status === "Pending"
+                //     ? "pending"
+                //     : seg.status === "Completed"
+                //     ? "completed"
+                //     : "neutral";
+                
+                const statusClass =
+                mergedStatus === "Pending"
+                  ? "pending"
+                  : mergedStatus === "Completed"
+                  ? "completed"
+                  : "neutral";
+            //     return (
+            //       <button
+            //         key={seg.id}
+            //         className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
+            //         onClick={() => setSelectedId(seg.id)}
+            //         aria-label={`Open Segment ${seg.index}`}
+            //       >
+            //         <div className="tm-seg-item-top">
+            //           <span className={`tm-seg-pill ${statusClass}`}>Segment {seg.index}</span>
+            //           <span className="tm-seg-state">{seg.status}</span>
+            //         </div>
+            //         <div className="tm-seg-snippet">{seg.source}</div>
+            //         <div className="tm-seg-meta-row">
+            //           <span className="tm-seg-meta">{seg.words} words</span>
+            //         </div>
+            //       </button>
+            //     );
+            //   })}
+            //   {segments.length === 0 && (
+            //     <div className="tm-empty">No segment present to display.</div>
+            //   )}
+            // </div>
+            
+return (
   <button
-    className="tm-link-btn"
-    disabled={!isDetailEnabled}
-    onClick={() => {
-      // Retrieve the metadata (score, glossary, etc.) stored during translation [cite: 157-158]
-      const reviewData = selectedResolved?.reviewData || segOverrides[selectedResolved?.id]?.reviewData;
-
-      navigate("/tm-analysis", {
-        state: {
-          segment: selectedResolved,
-          reviewData: reviewData,
-          projectName: projectName,
-          targetLang: inboundLang || "EN",
-          sourceLang: "English",
-          allSegments: segments
-        }
-      });
-    }}
+    key={seg.id}
+    className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
+    onClick={() => setSelectedId(seg.id)}
+    aria-label={`Open Segment ${seg.index}`}
   >
-    View TM Analysis {selectedResolved?.status === "Review Needed" ? "(Action Required)" : ""}
+    <div className="tm-seg-item-top">
+      <span className={`tm-seg-pill ${statusClass}`}>Segment {seg.index}</span>
+      <span className="tm-seg-state">{mergedStatus}</span>
+    </div>
+    <div className="tm-seg-snippet">{seg.source}</div>
+    <div className="tm-seg-meta-row">
+      <span className="tm-seg-meta">{seg.words} words</span>
+    </div>
   </button>
+);
+})}
+{segments.length === 0 && (
+<div className="tm-empty">No segment present to display.</div>
+)}
 </div>
-                  
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
 
+          </div>
+         {/* ===== Right column: TWO SEPARATE CARDS ===== */}
+         <div className="tm-right-column">
+            {/* 1) ACTION CARD — always first */}
+            <div className="tm-card tm-action-card">
+            <div className="tm-card-header">
+      <h3 className="tm-card-title">
+        {selectedResolved?.index ? `Section ${selectedResolved.index}` : "Section"}
+      </h3>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        {/* Optional TM badge here if you want it in the header too */}
+        {/* <span className="tm-chip">TM: {selectedResolved?.status === "Completed" ? "100%" : "0%"}</span> */}
+        <span className="tm-chip soft">
+          {selectedResolved?.type || "body"}
+        </span>
+      </div>
+    </div>
+    {selectedResolved?.status !== "Completed" && 
+              <div className="tm-card-header1">
+              <div className="tm-action-title">
+                  <h3 className="tm-card-title1">TM Leverage</h3>
+                  <div className="tm-card-subset">
+                    <span className="tm-light">
+                      {tmLeverageOn
+                        ? "AI will use Translation Memory for consistency and cost savings"
+                        : "Pure AI translation without TM matching"}
+                    </span>
+                  </div>
+                </div>
+                <label className="tm-switch" aria-label="Toggle TM Leverage">
+                  <input
+                    type="checkbox"
+                    checked={tmLeverageOn}
+                    onChange={(e) => setTmLeverageOn(e.target.checked)}
+                  />
+                  <span className="tm-slider" />
+                </label>
+              </div>
+}
+
+              {/* <div className="tm-action-buttons">
+                <button
+                  className={`tm-btn primary small ${isTranslating ? "is-loading" : ""}`}
+                  onClick={handleAiTranslate}
+                  disabled={!selected || isTranslating}
+                >
+                  {isTranslating ? "Translating…" : "AI Translate"}
+                </button>
+
+                <button
+                  className="tm-btn outline small"
+                  onClick={handleCompleteSegment}
+                  disabled={!selected}
+                >
+                  Complete
+                </button>
+              </div> */}
+
+<div className="tm-detail-actions">
+  {/* Completed segment - show Edit button only when NOT editing */}
+  
+{selectedResolved?.status === "Completed" && !isEditingTranslation && (
+    <button
+      className="tm-btn outline small"
+      onClick={() => setIsEditingTranslation(true)}
+      title="Edit Translation"
+    >
+      <Edit3 size={15} className="h-4 w-4 mr-2" />
+      Edit Translation
+    </button>
+  )}
+
+  {selectedResolved?.status === "Completed" && isEditingTranslation && (
+    <button
+      className="tm-btn primary small"
+      onClick={() => {
+        // Persist as needed, then re-lock
+        setIsEditingTranslation(false);
+      }}
+      title="Save Changes"
+    >
+      <CheckCircle size={16} className="h-4 w-4 mr-2" />
+      Save Changes
+    </button>
+  )}
+
+  {/* Pending / In-progress segment - show AI Translate + Complete */}
+  
+{/* Pending / In-progress segment - show AI Translate + Complete */}
+{selectedResolved?.status !== "Completed" && (
+  <>
+    <button
+      className={`tm-btn outline small ${isTranslating ? "is-loading" : ""} flex items-center gap-2`}
+      onClick={handleAiTranslate}
+      disabled={!selectedResolved || isTranslating}
+    >
+      {isTranslating
+        ? <Loader2 size={14} className="h-4 w-4 animate-spin" />
+        : <Sparkles size={14} className="h-4 w-4" />}
+      {isTranslating ? "Translating…" : "AI Translate"}
+    </button>
+
+    {/* <button
+      className="tm-btn primary small flex items-center gap-2"
+      onClick={handleCompleteSegment}
+      disabled={!hasRealTranslation(selectedResolved)}
+      title="Mark segment as complete"
+    >
+      <CheckCircle size={15} className="h-4 w-4" />
+      Complete
+    </button> */}
+  </>
+)}
+</div>
+
+              {/* Inline feedback */}
+              {translationError && (
+                <div className="tm-inline-error" role="alert">{translationError}</div>
+              )}
+              {/* {!isDetailEnabled && selected && (
+                <div className="tm-inline-hint">
+                  After translation, the detail card with Source/Translated will enable below.
+                </div>
+              )} */}
+            </div>
+
+            {/* 2) DETAIL CARD — below; disabled until translation exists */}
+            <div
+              className={`tm-card tm-detail-card ${isDetailEnabled ? "" : "is-disabled"}`}
+              aria-disabled={!isDetailEnabled}
+            >
+              {/* {!isDetailEnabled && (
+                <div className="tm-detail-overlay">
+                  <div className="tm-overlay-content">
+                    <div className="tm-overlay-title">Waiting for translation…</div>
+                    <div className="tm-overlay-sub">
+                      Click <strong>AI Translate</strong> above to fetch translation from n8n.
+                    </div>
+                  </div>
+                </div>
+              )} */}
+
+              {/* <div className="tm-card-header">
+                <h3 className="tm-card-title">Section 1</h3>
+                <div className="tm-card-subset">
+                  <span className="tm-light">body</span>
+                </div>
+              </div> */}
+
+              {/* {!selected && (
+                <div className="tm-empty large">
+                  Select a segment from the left to view Source &amp; Translated text.
+                </div>
+              )} */}
+
+              {selected && (
+                <div className="tm-detail">
+                  {/* <div className="tm-detail-row">
+                    <div className="tm-detail-row-left">
+                      <span className="tm-chip soft">Source Text</span>
+                    </div>
+                    <div className="tm-detail-row-right">
+                      <span className="tm-lang-chip">{selectedResolved?.lang || inboundLang || "EN"}</span>
+                    </div>
+                  </div>
+                  <div className="tm-box source">{selectedResolved?.source || ""}</div> */}
+
+<div className="tm-source-card">
+  <div className="tm-source-card-header">
+    <span className="tm-chip soft tm-chip-source">
+    <FileText size={15} className="h-4 w-4" />
+      Source Text
+    </span>
+    <span className="tm-lang-chip">
+      {/* {selectedResolved?.lang || inboundLang || "EN"} */}
+      EN
+    </span>
+  </div>
+
+  <div className="tm-source-card-body">
+    {selectedResolved?.source || ""}
+  </div>
+</div>
+
+                  
+                  {/* <div className="tm-chip success">Translated Text</div>
+                  <div className="tm-box translated">
+                    {isDetailEnabled
+                      ? (selectedResolved?.translated || "")
+                      : <span className="tm-light">— Awaiting translation —</span>}
+                  </div>
+                  <div className="tm-detail-tools">
+                    <span className="tm-light">
+                      {selectedResolved?.status === "Completed" ? "TM 100%" : "TM 0%"}
+                    </span>
+                    <div className="tm-detail-spacer" />
+                    <button className="tm-btn link small" disabled={!isDetailEnabled}>
+                      Locked
+                    </button>
+                    <button className="tm-btn link small" disabled={!isDetailEnabled}>
+                      View TM Analysis
+                    </button>
+                  </div> */}
+                  
+{/* Translated Text card (pretty version) */}
+<div className="tm-translated-card">
+  {/* Header row */}
+  <div className="tm-translated-card-header">
+    <span className="tm-chip success tm-chip-translated">
+    <Languages size={15} className="h-4 w-4" />
+      Translated Text
+    </span>
+
+
+    <span className="tm-lang-chip1">
+    {inboundLang}
+  </span>
+  {/* <span className="tm-light">
+    TM {tmMatchInfo[selectedResolved?.id] || 0}%
+  </span> */}
+   
+<div className="tm-translated-tools" >
+    {/* Completed + not editing → Locked pill */}
+    {selectedResolved?.status === "Completed" && !isEditingTranslation && (
+      <span className="tm-locked-pill" title="Locked">
+        <Lock size={13} className="h-3 w-3 mr-1" />
+        Locked
+      </span>
+    )}
+
+    {/* Completed + editing → Unlock + Editing pill */}
+    {selectedResolved?.status === "Completed" && isEditingTranslation && (
+      <span className="tm-editing-pill" title="Editing">
+        <Unlock size={13} className="h-3 w-3 mr-1" />
+        Editing
+      </span>
+    )}
+
+    {/* Completed only → View TM Analysis */}
+    {selectedResolved?.status === "Completed" && (
+      <button
+        className="tm-btn link small"
+        disabled={!isDetailEnabled}
+        onClick={() => {
+          const reviewData = selectedResolved?.reviewData || segOverrides[selectedResolved?.id]?.reviewData;
+    
+          navigate("/tm-analysis", {
+            state: {
+              segment: selectedResolved,
+              reviewData: reviewData,
+              projectName: projectName,
+              targetLang: inboundLang || "EN",
+              sourceLang: "English",
+              allSegments: segments
+            }
+          });
+        }}
+      >
+         <BarChart3 size={15} className="h-4 w-4 mr-2" />
+        {/* View TM Analysis */}
+        View TM Analysis {selectedResolved?.status === "Review Needed" ? "(Action Required)" : ""}
+      </button>
+    )}
+  </div>
+
+  </div>
+
+  {/* Body panel (rounded green-tinted area) */}
+  {/* <div className="tm-translated-card-body">
+    {isDetailEnabled
+      ? (selectedResolved?.translated || "")
+      : <span className="tm-light">— Awaiting translation —</span>}
+  </div> */}
+  
+<div className="tm-translated-card-body">
+  {!isDetailEnabled ? (
+    <span className="tm-light">Enter translation or use TM/AI suggestions...</span>
+  ) : isEditingTranslation ? (
+    <textarea
+      value={selectedResolved?.translated || ""}
+      onChange={(e) => {
+        const newText = e.target.value;
+        setSegOverrides(prev => ({
+          ...prev,
+          [selectedResolved.id]: {
+            ...prev[selectedResolved.id],
+            translated: newText
+          }
+        }));
+      }}
+      placeholder="Edit translated text..."
+      className="tm-translated-textarea"
+    />
+  ) : (
+    <div className="tm-translated-readonly">
+      {selectedResolved?.translated || ""}
+    </div>
+  )}
+</div>
+
+</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+        </div>
+         )}
         {/* Integrated Draft tab content (same page) */}
         {activeTab === "draft" && (
           <DraftPanel

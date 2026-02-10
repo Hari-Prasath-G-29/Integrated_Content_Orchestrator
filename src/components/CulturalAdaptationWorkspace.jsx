@@ -1,6 +1,12 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "../App.css";
+// import "../App.css";
+import "./css/Cultural.css";
+import {  ArrowLeft,
+  Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3, FileDown, Brain,
+  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react';
+import { getProject, updateProjectMeta, markPhaseComplete } from '../lib/progressStore';
+import { usePhaseNavigation } from "./PhaseNav.jsx";
 
 /**
  * Cultural Intelligence Hub
@@ -12,9 +18,10 @@ import "../App.css";
  */
 export default function CulturalAdaptationWorkspace({
   projectName: projectNameProp = "No project name to display",
-  therapyArea = "Respiratory · DE",
+  therapyArea = "",
   progressItems: progressItemsProp = { reviewed: 0, total: 75 },
-  segments: segmentsProp = [],
+  // segments: segmentsProp = [],
+  segments: segmentsProp = null
 }) {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -22,8 +29,30 @@ export default function CulturalAdaptationWorkspace({
   /** Tabs */
   const [activeTab, setActiveTab] = useState("adaptation");
 
+  const projectId = state?.projectId;
   /** Prefer project from previous page */
   const projectName = state?.projectName ?? projectNameProp;
+  const gotoPhase = usePhaseNavigation(projectId, projectName);
+  console.log('Cultural: projectId', state?.projectId);
+  
+const rec = getProject(projectId);
+console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.length);
+
+  const projectRec = React.useMemo(() => getProject(projectId), [projectId]);
+   const persistedSegmentsP2 = React.useMemo(
+     () => (projectRec?.meta?.segmentsP2 && Array.isArray(projectRec.meta.segmentsP2))
+           ? projectRec.meta.segmentsP2
+           : [],
+     [projectRec]
+   );
+
+   
+ const persistedSegmentsP1 = React.useMemo(
+     () => (projectRec?.meta?.segmentsP1 && Array.isArray(projectRec.meta.segmentsP1))
+           ? projectRec.meta.segmentsP1 : [],
+     [projectRec]
+   )
+  
 
   /** ========= ENV HELPERS ========= */
   const getEnv = () => {
@@ -84,6 +113,15 @@ export default function CulturalAdaptationWorkspace({
       }
     }
     return "";
+  };
+
+  const getCIStatus = (seg, overrides) => {
+    const o = overrides?.[seg.id] || {};
+    const status = String(
+      o.status ?? seg.status ?? o.ciStatus ?? seg.ciStatus ?? ""
+    ).toLowerCase();
+    if (status === "reviewed") return "Reviewed";
+    return "Pending"; // stay Pending until user explicitly clicks "Mark as Reviewed"
   };
 
   /** ========= Helpers to parse TPS (translation/problem/suggestion) ========= */
@@ -268,47 +306,117 @@ export default function CulturalAdaptationWorkspace({
    * Normalize incoming segments from router state.
    * Force status to Pending and adapted blank.
    */
+  // const segments = useMemo(() => {
+  //   const raw = Array.isArray(state?.segments)
+  //     ? state.segments
+  //     : Array.isArray(segmentsProp)
+  //     ? segmentsProp
+  //     : [];
+
+  //   const targetFromTherapy = getTargetLang(therapyArea);
+
+  //   return (raw || [])
+  //     .map((seg, i) => {
+  //       const index = typeof seg.index === "number" ? seg.index : i + 1;
+  //       const source = String(seg.source ?? "");
+  //       const translated = String(seg.translated ?? "");
+  //       const adapted = "";
+
+  //       const title =
+  //         seg.title ||
+  //         seg.assetTitle ||
+  //         source.split(/\r?\n/)[0] ||
+  //         `Section ${index}`;
+  //       const words =
+  //         typeof seg.words === "number"
+  //           ? seg.words
+  //           : source.split(/\s+/).filter(Boolean).length;
+
+  //       return {
+  //         id: seg.id ?? `seg-${index}`,
+  //         index,
+  //         title,
+  //         source,
+  //         translated,
+  //         adapted,
+  //         words,
+  //         status: "Pending",
+  //         lang: seg.lang ?? targetFromTherapy ?? "EN",
+  //       };
+  //     })
+  //     .filter((s) => s.source.trim().length > 0)
+  //     .sort((a, b) => a.index - b.index);
+  // }, [state?.segments, segmentsProp, therapyArea]);
+
   const segments = useMemo(() => {
-    const raw = Array.isArray(state?.segments)
+    // const raw = Array.isArray(state?.segments)
+    //   ? state.segments
+    //   : Array.isArray(segmentsProp)
+    //   ? segmentsProp
+    //   : [];
+      
+    
+const rawCandidate =
+    (Array.isArray(state?.segments) && state.segments.length > 0)
       ? state.segments
-      : Array.isArray(segmentsProp)
+      : (Array.isArray(persistedSegmentsP2) && persistedSegmentsP2.length > 0)
+      ? persistedSegmentsP2
+      : (Array.isArray(persistedSegmentsP1) && persistedSegmentsP1.length > 0)
+      ? persistedSegmentsP1
+      : (Array.isArray(segmentsProp) && segmentsProp.length > 0)
       ? segmentsProp
       : [];
 
-    const targetFromTherapy = getTargetLang(therapyArea);
+//     return (rawCandidate || [])
+//       .map((seg, i) => {
+//         const index = typeof seg.index === "number" ? seg.index : i + 1;
+//         const source = String(seg.source ?? "");
+//         const translated = String(seg.translated ?? "");            
+//         const adapted = String(seg.adapted ?? seg.culturallyAdapted ?? ""); 
+//         const words =
+//           typeof seg.words === "number"
+//             ? seg.words
+//             : source.split(/\s+/).filter(Boolean).length;
 
-    return (raw || [])
-      .map((seg, i) => {
-        const index = typeof seg.index === "number" ? seg.index : i + 1;
-        const source = String(seg.source ?? "");
-        const translated = String(seg.translated ?? "");
-        const adapted = "";
+//         return {
+//           id: seg.id ?? `seg-${index}`,
+//           index,
+//           source,
+//           translated,  
+//           adapted,
+//           words,
+//           status: seg.status ?? (translated.trim() ? "Completed" : "Pending"),
+//           lang: seg.lang ?? (state?.lang ?? "EN"),
+//         };
+//       })
+//       .filter((s) => s.source.trim().length > 0)
+//       .sort((a, b) => a.index - b.index);
+// }, [state?.segments, segmentsProp, persistedSegmentsP2, state?.lang]);
 
-        const title =
-          seg.title ||
-          seg.assetTitle ||
-          source.split(/\r?\n/)[0] ||
-          `Section ${index}`;
-        const words =
-          typeof seg.words === "number"
-            ? seg.words
-            : source.split(/\s+/).filter(Boolean).length;
+const targetFromTherapy = getTargetLang(therapyArea);
 
-        return {
-          id: seg.id ?? `seg-${index}`,
-          index,
-          title,
-          source,
-          translated,
-          adapted,
-          words,
-          status: "Pending",
-          lang: seg.lang ?? targetFromTherapy ?? "EN",
-        };
-      })
-      .filter((s) => s.source.trim().length > 0)
-      .sort((a, b) => a.index - b.index);
-  }, [state?.segments, segmentsProp, therapyArea]);
+return (rawCandidate || [])
+    .map((seg, i) => ({
+      id: seg.id ?? `seg-${typeof seg.index === "number" ? seg.index : i + 1}`,
+      index: typeof seg.index === "number" ? seg.index : i + 1,
+      source: String(seg.source ?? ""),
+      translated: String(seg.translated ?? ""),
+      adapted: String(seg.adapted ?? seg.culturallyAdapted ?? ""),
+      words: typeof seg.words === "number" ? seg.words : String(seg.source ?? "").split(/\s+/).filter(Boolean).length,
+      // status: seg.status ?? (String(seg.translated ?? "").trim() ? "Completed" : "Pending"),
+   tmStatus: seg.tmStatus ?? (String(seg.translated ?? "").trim() ? "Completed" : "Pending"),
+   ciStatus: seg.ciStatus ?? (String(seg.adapted ?? "").trim() ? "Completed" : "Pending"),
+      lang: seg.lang ?? (state?.lang ?? "EN"),
+      // lang: seg.lang ?? targetFromTherapy ?? "EN",
+      title:
+      seg.title ||
+      seg.assetTitle ||
+      seg.source.split(/\r?\n/)[0] ||
+      `Section ${seg.index}`
+    }))
+    .filter(s => s.source.trim().length > 0)
+    .sort((a, b) => a.index - b.index);
+}, [state?.segments, segmentsProp,  therapyArea, persistedSegmentsP2, persistedSegmentsP1, state?.lang]);
 
   /** Selected segment */
   const [selectedId, setSelectedId] = useState(null);
@@ -316,29 +424,57 @@ export default function CulturalAdaptationWorkspace({
     if (!selectedId && segments.length) setSelectedId(segments[0].id);
   }, [segments, selectedId]);
 
+  // --- Focus mode state (unique key for Cultural page) ---
+const [isFocusMode, setIsFocusMode] = useState(() => {
+  const v = localStorage.getItem('ci_focus_mode');
+  return v === 'true';
+});
+
+const toggleFocusMode = () => setIsFocusMode(prev => !prev);
+
+// persist on change
+useEffect(() => {
+  localStorage.setItem('ci_focus_mode', String(isFocusMode));
+}, [isFocusMode]);
+
+// keyboard: F to focus, Esc to exit
+useEffect(() => {
+  const onKey = (e) => {
+    const k = String(e.key || '').toLowerCase();
+    if (k === 'f') setIsFocusMode(true);
+    if (k === 'escape') setIsFocusMode(false);
+  };
+  window.addEventListener('keydown', onKey);
+  return () => window.removeEventListener('keydown', onKey);
+}, []);
+
   const selected = useMemo(
     () => segments.find((s) => s.id === selectedId) || null,
     [segments, selectedId]
   );
 
   /** ========= UI OVERLAYS (do not mutate base segments) ========= */
-  const [segOverrides, setSegOverrides] = useState({}); // { [id]: { adapted?: string, status?: string, changeLog?: {from,to} } }
-  const [isAdapting] = useState(false);
-  const [adaptError] = useState(null);
+  const [segOverrides, setSegOverrides] = useState({}); // { [id]: { adapted?: string, status?: string } }
+  const [isAdapting, setIsAdapting] = useState(false);
+  const [adaptError, setAdaptError] = useState(null);
 
+  /** Select with overlays applied */
   const selectedResolved = useMemo(() => {
     if (!selected) return null;
     const o = segOverrides[selected.id] || {};
     return { ...selected, ...o };
   }, [selected, segOverrides]);
 
-  /** Progress */
+  /** Progress (reviewed count based on adapted text) */
   const progressItems = useMemo(() => {
     const total = segments.length || progressItemsProp.total || 0;
     const reviewed = segments.filter((s) => {
+      // Check overlays first
       const o = segOverrides[s.id];
       const status = String(o?.status ?? "Pending").toLowerCase();
       return status === "completed" || status === "reviewed";
+      // const adapted = (o?.adapted ?? s.adapted ?? "").trim();
+      // return adapted.length > 0;
     }).length;
     return total > 0 ? { reviewed, total } : progressItemsProp;
   }, [segments, segOverrides, progressItemsProp]);
@@ -365,29 +501,80 @@ export default function CulturalAdaptationWorkspace({
   };
 
   /** Sidebar navigation */
+  // const handlePhaseClick = (phaseName) => {
+  //   if (phaseName === "Smart TM Translation") {
+  //     navigate("/smartTMTranslationHub", { state: { projectName, segments } });
+  //   }
+  //   if (phaseName === "Global Context Capture") {
+  //     navigate("/globalAssetCapture", { state: { projectName, segments } });
+  //   }
+  // };
+
   const handlePhaseClick = (phaseName) => {
     if (phaseName === "Smart TM Translation") {
-      navigate("/smartTMTranslationHub", { state: { projectName, segments } });
+      navigate("/smartTMTranslationHub", {
+        state: {
+          projectId,
+          projectName,
+          segments,
+        },
+      });
     }
     if (phaseName === "Global Context Capture") {
-      navigate("/globalAssetCapture", { state: { projectName, segments } });
+      navigate("/globalAssetCapture", {
+        state: {
+          projectId,
+          projectName,
+          segments,
+        },
+      });
     }
   };
 
+
   /** Complete Phase 3 → next page */
-  const handleCompletePhase = () => {
+  // const handleCompletePhase = () => {
+  //   const mergedSegments = segments.map((s) => {
+  //     const o = segOverrides[s.id] || {};
+  //     return {
+  //       ...s,
+  //       ...(o.adapted !== undefined ? { adapted: o.adapted } : {}),
+  //       ...(o.status !== undefined ? { status: o.status } : {}),
+  //     };
+  //   });
+
+  //   navigate("/regulatoryCompliance", {
+  //     state: { projectName, segments: mergedSegments },
+  //   });
+  // };
+
+   /** Complete Phase 3 → next page (adjust route as needed) */
+   const handleCompletePhase = () => {
     const mergedSegments = segments.map((s) => {
       const o = segOverrides[s.id] || {};
       return {
         ...s,
         ...(o.adapted !== undefined ? { adapted: o.adapted } : {}),
-        ...(o.status !== undefined ? { status: o.status } : {}),
+        // ...(o.status !== undefined ? { status: o.status } : {}),
+        ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
       };
     });
 
-    navigate("/regulatoryCompliance", {
-      state: { projectName, segments: mergedSegments },
-    });
+// ✅ Persist P3 outputs
+   updateProjectMeta(projectId, { segmentsP3: mergedSegments });
+
+   // ✅ Mark P3 complete
+   markPhaseComplete(projectId, 'P3');
+
+    // navigate("/regulatoryCompliance", {
+    //   state: {
+    //     projectId,
+    //     projectName,
+    //     segments: mergedSegments,
+    //   },
+    // });
+
+    gotoPhase('P4');
   };
 
   /** Mark as Reviewed */
@@ -464,7 +651,7 @@ export default function CulturalAdaptationWorkspace({
 
     setIsAnalyzing(true);
     setAnalysisError(null);
-    setIsAnalysisOpen(true);
+    // setIsAnalysisOpen(true);
 
     try {
       if (!N8N_CULTURAL_WEBHOOK_URL) {
@@ -552,8 +739,10 @@ export default function CulturalAdaptationWorkspace({
         ...prev,
         [selectedResolved.id]: analysis,
       }));
+      setIsAnalysisOpen(true);
     } catch (err) {
       setAnalysisError(err.message || "AI analysis failed.");
+      setIsAnalysisOpen(true);
     } finally {
       setIsAnalyzing(false);
     }
@@ -623,6 +812,23 @@ export default function CulturalAdaptationWorkspace({
     const next = segments[currentIdx + 1];
     if (next) setSelectedId(next.id);
   };
+
+  // Derived flags for the "Mark as Reviewed" button
+const adaptedTextForSelected = (segOverrides[selectedResolved?.id]?.adapted ?? selectedResolved?.adapted ?? "").trim();
+
+const isReviewedForSelected = (() => {
+  const s = String(
+    segOverrides[selectedResolved?.id]?.status ??
+    selectedResolved?.status ??
+    segOverrides[selectedResolved?.id]?.ciStatus ??
+    selectedResolved?.ciStatus ??
+    ""
+  ).toLowerCase();
+  return s === "reviewed";
+})();
+
+// Enabled only when adapted text exists and not already reviewed
+const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !isAnalyzing;
 
   /** Demo content (kept for look-and-feel in the panel) */
   const defaultTerminologyForScreenshot = [
@@ -772,9 +978,11 @@ export default function CulturalAdaptationWorkspace({
   }, [reportItems]);
 
   return (
-    <div className="tm-app">
+    <div className="cultural-page">
+    {/* <div className={`cultural-page tm-app ${isFocusMode ? 'is-focus' : ''}`}> */}
+    <div className={`tm-app ${isFocusMode ? 'is-focus' : ''}`}>
       {/* Sidebar */}
-      <aside className="tm-sidebar" aria-label="Workflow Phases">
+      <aside className="tm-sidebar">
         <div className="tm-sidebar-progress">
           <div className="tm-progress-row">
             <span className="tm-progress-label">Overall Progress</span>
@@ -783,13 +991,11 @@ export default function CulturalAdaptationWorkspace({
           <div className="tm-progress-sub">
             {progressItems.reviewed} of {progressItems.total} reviewed
           </div>
-          <div
-            className="tm-progress-bar"
-            role="progressbar"
-            aria-valuenow={progressPct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
+          <div className="tm-progress-bar"
+          role="progressbar"
+          aria-valuenow={progressPct}
+          aria-valuemin={0}
+          aria-valuemax={100}>
             <div className="tm-progress-fill" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
@@ -798,25 +1004,20 @@ export default function CulturalAdaptationWorkspace({
           {SIDEBAR_PHASES.map((p) => (
             <button
               key={p.id}
-              className={`tm-phase-item ${p.status} ${
-                p.name === "Cultural Intelligence" ? "is-active" : ""
-              }`}
+              // className={`tm-phase-item ${p.status} ${p.name === "Cultural Intelligence" ? "is-active" : ""}`}
+              className={`tm-phase-item ${p.status} ${p.id === 'P3' ? "is-active" : ""}`}
               aria-label={`Open ${p.name}`}
-              onClick={() => handlePhaseClick(p.name)}
+              // onClick={() => handlePhaseClick(p.name)}
+              onClick={() => gotoPhase(p.id)}
             >
               <span className={`tm-phase-icon ${p.iconClass}`} />
               <span className="tm-phase-text">
                 <span className="tm-phase-title">{p.name}</span>
                 <span className="tm-phase-sub">{p.sub}</span>
               </span>
-              {p.status === "done" && (
-                <span className="tm-phase-check" aria-hidden={true}>
-                  ✓
-                </span>
-              )}
-              {p.name === "Cultural Intelligence" && (
-                <span className="tm-phase-dot" aria-hidden={true} />
-              )}
+              {p.status === "done" && <span className="tm-phase-check">✓</span>}
+              {/* {p.name === "Cultural Intelligence" && <span className="tm-phase-dot" />} */}
+              {p.id === "P3" && <span className="tm-phase-dot" />}
             </button>
           ))}
         </nav>
@@ -824,8 +1025,58 @@ export default function CulturalAdaptationWorkspace({
 
       {/* Main */}
       <div className="tm-main">
+          {/* Header */}
+          <header className="tm-header">
+  {/* LEFT: Breadcrumbs */}
+  <div className="tm-header-left">
+    <div className="tm-crumbs">
+      <button className="tm-crumb" onClick={() => navigate('/')}>
+        <ArrowLeft size={14} className="h-1 w-1 mr-2" /> Main Hub
+      </button>
+      <span className="tm-divider" />
+      <button className="tm-crumb" onClick={() => navigate('/glocalizationHub')}>
+        Glocalization Hub
+      </button>
+    </div>
+  </div>
+
+  {/* CENTER: Title (always centered in Focus mode) */}
+  <div className="tm-header-center">
+    <div className="tm-title-row">
+      <h1 className="tm-page-title">{projectName}</h1>
+      <span className="tm-title-sub">{therapyArea}</span>
+    </div>
+  </div>
+
+  {/* RIGHT: Saved + Actions */}
+  <div className="tm-header-right">
+  <span className="tm-saved"> <CheckCircle2 size={12} className="h-1 w-1 text-green-600" />
+  Saved</span>
+
+    <button className="tm-btn ghost tm-btn-icon">
+    <Save size={15} className="h-4 w-4 mr-2" /> Save
+    </button>
+
+    <button
+      className="tm-btn ghost tm-btn-icon"
+      onClick={toggleFocusMode}
+      aria-pressed={isFocusMode}
+      title={isFocusMode ? 'Exit focus (Esc)' : 'Enter focus (F)'}
+    >
+      {isFocusMode ? (
+        <>
+          <Minimize2 size={16} /> Exit
+        </>
+      ) : (
+        <>
+          <Maximize2 size={16} /> Focus
+        </>
+      )}
+    </button>
+  </div>
+</header>
         {/* Tabs bar */}
-        <section className="tm-tabs-bar">
+        {/* <section className="tm-tabs-bar">
           <div className="tm-tabs" role="tablist" aria-label="Cultural Intelligence Tabs">
             <button
               className={`tm-tab ${activeTab === "adaptation" ? "is-active" : ""}`}
@@ -879,176 +1130,235 @@ export default function CulturalAdaptationWorkspace({
               </button>
             </div>
           </div>
-        </section>
+        </section> */}
 
-        {/* Header row */}
-        {activeTab === "adaptation" && (
-          <section className="tm-header-secondary">
-            <div className="tm-header-left">
-              <h2 className="tm-page-subtitle">Cultural Adaptation Workspace</h2>
-              <span className="tm-light">
-                Review translations and adapt content for cultural relevance
-              </span>
-            </div>
-            <div className="tm-header-right-inline">
-              <div className="tm-progress-inline">
-                <span className="tm-progress-inline-label">Progress:</span>
-                <span className="tm-progress-inline-value">
-                  {progressItems.reviewed} / {progressItems.total} reviewed
-                </span>
-                <div className="tm-progress-inline-bar">
-                  <div
-                    className="tm-progress-inline-fill"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
+<section className="tm-tabs-bar">
+  <div className="tm-tabs" role="tablist" aria-label="Cultural Intelligence Tabs">
+    <button className={`tm-tab ${activeTab === "adaptation" ? "is-active" : ""}`} 
+    onClick={() => trySwitchToTab("adaptation")}
+              role="tab"
+              aria-selected={activeTab === "adaptation"}>
+      Cultural Adaptation
+    </button>
+    <button className={`tm-tab ${activeTab === "draft" ? "is-active" : ""}`} 
+    onClick={() => trySwitchToTab("draft")}
+    role="tab"
+    aria-selected={activeTab === "draft"}
+    >
+      Culturally-Adapted Draft
+    </button>
+    <button className={`tm-tab ${activeTab === "report" ? "is-active" : ""}`}
+      onClick={() => trySwitchToTab("report")}
+      role="tab"
+      aria-selected={activeTab === "report"}
+     >
+      Intelligence Report
+    </button>
+  </div>
+</section>
+       
 
         {/* WORKSPACE CONTENT SWITCHER */}
         {activeTab === "adaptation" ? (
-          /* ============= ORIGINAL ADAPTATION VIEW ============= */
-          <section className="tm-workspace ci-workspace">
-            {/* Left card */}
-            <div className="tm-card tm-left">
-              <div className="tm-card-header">
-                <h3 className="tm-card-title">Content Segments</h3>
-                <span className="tm-light">{segments.length} segments to review</span>
-              </div>
+  <div>
+<section className="tm-tabs-right">
+  <div className="tm-status-left">
+    <h2 className="tm-section-title">Cultural Adaptation Workspace</h2>
+    <p className="tm-section-sub">Review translations and adapt content for cultural relevance</p>
+  </div>
 
-              <div className="tm-seg-list">
-                {segments.map((seg) => {
-                  const isSelected = seg.id === selectedId;
-                  const o = segOverrides[seg.id] || {};
-                  const status = o.status || "Pending";
-                  const pillClass = statusPill(status);
+  <div className="tm-progress-inline">
+    <span className="tm-progress-inline-label">Progress:</span>
+    <span className="tm-progress-inline-value">{progressItems.reviewed} / {progressItems.total} reviewed</span>
+    <div className="tm-progress-inline-bar">
+      <div className="tm-progress-inline-fill" style={{ width: `${progressPct}%` }} />
+    </div>
+  </div>
 
-                  return (
-                    <button
-                      key={seg.id}
-                      className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
-                      onClick={() => setSelectedId(seg.id)}
-                      aria-label={`Open Segment ${seg.index}`}
-                    >
-                      <div className="tm-seg-item-top">
-                        <span className="tm-ci-index">[{seg.index}]</span>
-                        <span className={`tm-seg-pill ${pillClass}`}>
-                          <TickIcon className="tm-pill-icon" /> {status}
-                        </span>
-                      </div>
+  <div className="tm-tabs-actions">
+    <button className="tm-btn outline">
+    <FileDown size={15} className="mr-2 h-4 w-4" />Generate Agency Handoff PDF</button>
+    <button className="tm-btn primary" onClick={handleCompletePhase}>Complete Phase 3</button>
+  </div>
+</section>
+      
+        <section className="tm-workspace ci-workspace">
+          {/* Left card: Content Segments */}
+          <div className="tm-card tm-left">
+            {/* <div className="tm-card-header">
+              <h3 className="tm-card-title">Content Segments</h3>
+              <span className="tm-light">{segments.length} segments to review</span>
+            </div> */}
 
-                      <div className="tm-seg-title">{seg.title}</div>
-                      <div className="tm-seg-meta-row">
-                        <span className="tm-seg-meta">{seg.words} words</span>
-                      </div>
-                    </button>
-                  );
-                })}
-                {segments.length === 0 && (
-                  <div className="tm-empty">No segment present to display.</div>
-                )}
-              </div>
-            </div>
+            
+<div className="tm-card-header">
+   <div className="tm-card-header-left">
+     <h3 className="tm-card-title">Content Segments</h3>
+     <span className="tm-seg-count">{segments.length} segments to review</span>
+   </div>
+ </div>
 
-            {/* Right card */}
-            <div className="tm-card tm-right">
-              {!selectedResolved && (
-                <div className="tm-empty large">
-                  Select a segment on the left to view translation and adapted text.
-                  Use <strong>Analyze with AI</strong> to view the deeper analysis in
-                  the modal.
-                </div>
+
+            <div className="tm-seg-list">
+              {segments.map((seg) => {
+                const isSelected = seg.id === selectedId;
+                // Use overlays for adapted status if present
+                // const o = segOverrides[seg.id] || {};
+                // const status = o.status || seg.status;
+                const status = getCIStatus(seg, segOverrides);
+                const o = segOverrides[seg.id] || {};
+                const pillClass = statusPill(status);
+
+
+                return (
+                  <button
+                    key={seg.id}
+                    className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => setSelectedId(seg.id)}
+                    aria-label={`Open Segment ${seg.index}`}
+                  >
+                    <div className="tm-seg-item-top">
+                      <span className="tm-ci-index">[{seg.index}]</span>
+                      <span className="tm-seg-state">{status}</span>
+                    </div>
+                    <div className="tm-seg-snippet">{seg.source}</div>
+                    <div className="tm-seg-meta-row">
+                      <span className="tm-seg-meta">{seg.words} words</span>
+                    </div>
+                  </button>
+                );
+              })}
+              {segments.length === 0 && (
+                <div className="tm-empty">No segment present to display.</div>
               )}
+            </div>
+          </div>
 
-              {selectedResolved && (
-                <div className="tm-detail">
-                  {/* Translation (Target Language) */}
-                  <div className="tm-detail-row">
-                    <div className="tm-detail-row-left">
-                      <span className="tm-chip soft">
-                        Translation ({selectedResolved.lang || getTargetLang(therapyArea) || "—"})
-                      </span>
-                    </div>
-                    <div className="tm-detail-row-right">
-                      <span className="tm-lang-chip">
-                        {selectedResolved.lang || getTargetLang(therapyArea) || "—"}
-                      </span>
-                    </div>
+          {/* Right card: Source | Translated | Culturally Adapted */}
+          <div className="tm-card tm-right">
+            {/* <div className="tm-card-header">
+              <h3 className="tm-card-title">Cultural Adaptation Workspace</h3>
+              <span className="tm-light">Review translations and adapt content for cultural relevance</span>
+            </div> */}
+
+            {!selectedResolved && (
+              <div className="tm-empty large">
+                Select a segment on the left to view source, translated text, and adapted text.
+              </div>
+            )}
+
+            {selectedResolved && (
+              <div className="tm-detail">
+                {/* Source Content (English) */}
+                <div className="tm-detail-row">
+                  <div className="tm-detail-row-left">
+                    <span className="ci-section-label">Source Content (English)</span>
                   </div>
+                  {/* <div className="tm-detail-row-right">
+                    <span className="tm-lang-chip">{selectedResolved.lang || "EN"}</span>
+                  </div> */}
+                </div>
+               
+ <div className="ci-source-box">
+      {selectedResolved.source}
+    </div>
 
-                  {/* Segment title */}
-                  <div className="tm-light" style={{ margin: "4px 0 8px" }}>
-                    {selectedResolved.title}
-                  </div>
 
-                  {/* Show translation */}
-                  <div className="tm-box source" style={{ whiteSpace: "pre-wrap" }}>
-                    {selectedResolved.translated?.trim()?.length ? (
-                      selectedResolved.translated
-                    ) : (
-                      <span className="tm-light">— No translation provided —</span>
-                    )}
-                  </div>
+                {/* Translated Text (from previous page / n8n) */}
+                {/* <div className="tm-detail-head">
+                  <span className="tm-chip success">Translated Text</span>
+                  <button className="tm-btn link small">Analyze with AI</button>
+                </div>
+                <div className="tm-box translated">
+                  {selectedResolved.translated?.trim().length
+                    ? selectedResolved.translated
+                    : <span className="tm-light">— No translation provided —</span>}
+                </div> */}
 
-                  {/* Analyze button */}
-                  <div className="tm-detail-head" style={{ marginTop: 12 }}>
-                    <span className="tm-chip success">Analysis</span>
-                    <button
-                      className={`tm-btn primary small ${isAnalyzing ? "is-loading" : ""}`}
-                      disabled={!selectedResolved.translated?.trim().length || isAnalyzing}
-                      aria-label="Analyze translation with AI"
-                      onClick={handleAnalyzeClick}
+                
+{/* <div className="ci-row">
+      <h4 className="ci-subheading">Original Translation</h4>
+      <button
+        className="ci-pill-btn"
+          onClick={handleAnalyzeClick}
+      >
+         <Brain size={15}  className="h-4 w-4 mr-2" /> Analyze with AI
+      </button>
+    </div> */}
+
+<div className="ci-row">
+  <h4 className="ci-subheading">Original Translation</h4>
+
+  <button
+    className={`ci-pill-btn ${isAnalyzing ? 'is-loading' : ''}`}
+    onClick={handleAnalyzeClick}
+    disabled={isAnalyzing || !selectedResolved?.translated?.trim()?.length}
+    aria-live="polite"
+  >
+    {isAnalyzing ? (
+      <>
+        <Loader2 size={16} className="spin" />
+        Analyzing…
+      </>
+    ) : (
+      <>
+        <Brain size={15} className="h-4 w-4 mr-2" />
+        Analyze with AI
+      </>
+    )}
+  </button>
+</div>
+
+    <div className="ci-textarea">
+                  {selectedResolved.translated?.trim().length
+                    ? selectedResolved.translated
+                    : <span className="tm-light">— No translation provided —</span>}
+                </div>
+               
+<div className="ci-row">
+      <h4 className="ci-subheading">Culturally Adapted Text</h4>
+
+
+                  {/* NEW: AI Cultural Translate button beside "Mark as Reviewed" */}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {/* <button
+                      className={`tm-btn link small ${isAdapting ? "is-loading" : ""}`}
+                      onClick={handleCulturalTranslate}
+                      disabled={
+                        !selectedResolved.translated?.trim().length || isAdapting
+                      }
+                      aria-label="Send translated segment to n8n for cultural adaptation"
                     >
-                      Analyze with AI
+                      {isAdapting ? "Adapting…" : "AI Cultural Translate"}
+                    </button> */}
+
+                    {/* <button className="ci-pill-btn"> 
+                      <CheckCircle2 size={16}  onClick={handleMarkReviewed}/> Mark as Reviewed
+                      </button> */}
+                    <button
+                      className="ci-pill-btn"
+                      onClick={handleMarkReviewed}
+                      disabled={!canMarkReviewed}
+                    >
+                      <CheckCircle2 size={16} />
+                      {isReviewedForSelected ? " Reviewed" : " Mark as Reviewed"}
                     </button>
                   </div>
+                </div>
 
-                  {/* Culturally Adapted Text */}
-                  {(() => {
-                    // --------- NEW: only show the Mark as Reviewed button once adapted text exists ----------
-                    const showMarkReviewed = !!selectedResolved?.adapted?.trim();
-                    const isAlreadyReviewed =
-                      String(selectedResolved?.status || "").toLowerCase() === "reviewed";
+                <div className="tm-box">
+                  {selectedResolved.adapted?.trim().length
+                    ? selectedResolved.adapted
+                    : <span className="tm-light">— Awaiting cultural adaptation —</span>}
+                </div>
 
-                    return (
-                      <>
-                        <div className="tm-detail-head">
-                          <span className="tm-chip">Culturally Adapted Text</span>
-
-                          {showMarkReviewed && (
-                            <div style={{ display: "flex", gap: 8 }}>
-                              <button
-                                className="tm-btn primary small"
-                                onClick={handleMarkReviewed}
-                                aria-label="Mark current segment as reviewed"
-                                disabled={isAlreadyReviewed}
-                                title={
-                                  isAlreadyReviewed
-                                    ? "Already reviewed"
-                                    : "Mark this segment as reviewed"
-                                }
-                              >
-                                {isAlreadyReviewed ? "Reviewed" : "Mark as Reviewed"}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="tm-box" style={{ whiteSpace: "pre-wrap" }}>
-                          {selectedResolved.adapted?.trim().length ? (
-                            selectedResolved.adapted
-                          ) : (
-                            <span className="tm-light">— Awaiting cultural adaptation —</span>
-                          )}
-                        </div>
-                      </>
-                    );
-                  })()}
-
-                  {/* UI: CHANGE LOG (MATCHING SCREENSHOT) */}
-                  {selectedResolved.changeLog && (
+                {adaptError && (
+                  <div className="tm-inline-error" role="alert" style={{ marginTop: 8 }}>
+                    {adaptError}
+                  </div>
+                )}
+{/* UI: CHANGE LOG (MATCHING SCREENSHOT) */}
+{selectedResolved.changeLog && (
                     <div className="tm-change-log-section">
                       <div className="tm-change-log-label">Change Log:</div>
                       <div className="tm-change-log-banner">
@@ -1066,8 +1376,8 @@ export default function CulturalAdaptationWorkspace({
                       {analysisError}
                     </div>
                   )}
-
-                  <div className="tm-detail-tools">
+                {/* Footer tools */}
+                {/* <div className="tm-detail-tools">
                     <span className="tm-light">TM 0%</span>
                     <div className="tm-detail-spacer" />
                     <button
@@ -1085,77 +1395,86 @@ export default function CulturalAdaptationWorkspace({
                     >
                       View TM Analysis
                     </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        ) : activeTab === "draft" ? (
-          /* ============= CULTURALLY-ADAPTED DRAFT VIEW ============= */
-          <div className="tm-draft-container">
-            <div className="tm-draft-header-section">
-              <h2 className="tm-page-subtitle">Culturally-Adapted Draft Translation</h2>
-              <span className="tm-light">
-                Consolidated culturally-adapted content ready for final review
-              </span>
-            </div>
-
-            {/* Metrics Cards */}
-            <div className="tm-draft-metrics">
-              <div className="tm-metric-card">
-                <span className="tm-metric-value blue">{draftMetrics.segments}</span>
-                <span className="tm-metric-label">Segments</span>
+                  </div> */}
               </div>
-              <div className="tm-metric-card">
-                <span className="tm-metric-value green">{draftMetrics.changesApplied}</span>
-                <span className="tm-metric-label">Changes Applied</span>
-              </div>
-              <div className="tm-metric-card">
-                <span className="tm-metric-value orange">{draftMetrics.flagged}</span>
-                <span className="tm-metric-label">Flagged for Review</span>
-              </div>
-              <div className="tm-metric-card">
-                <span className="tm-metric-value dark">{draftMetrics.culturalScore}</span>
-                <span className="tm-metric-label">Cultural Score</span>
-              </div>
-            </div>
-
-            {/* Main Draft Content */}
-            <div className="tm-draft-main-card">
-              <div className="tm-draft-card-head">
-                <h3 className="tm-card-title">Final Culturally-Adapted Translation</h3>
-                <div className="tm-draft-actions">
-                  {/* <button className="tm-btn outline small">
-                    <span className="icon-magic">✨</span> Regenerate
-                  </button> */}
-                  <button
-                    className="tm-btn outline small"
-                    onClick={() => navigator.clipboard.writeText(fullDraftText)}
-                  >
-                    <span className="icon-copy">❐</span> Copy to Clipboard
-                  </button>
-                </div>
-              </div>
-              <div className="tm-draft-text-area">
-                <pre>{fullDraftText}</pre>
-              </div>
-            </div>
-
-            {/* Summary Panel (Collapsible placeholder) */}
-            <div className="tm-draft-summary-card">
-              <h3 className="tm-card-title">Cultural Adaptation Summary</h3>
-            </div>
+            )}
           </div>
-        ) : (
+          
+        </section>
+        </div>
+ ) : activeTab === "draft" ? (
+  /* ============= NEW CULTURALLY-ADAPTED DRAFT VIEW ============= */
+  <div className="tm-draft-container">
+    <div className="tm-draft-header-section">
+      <h2 className="tm-page-subtitle">Culturally-Adapted Draft Translation</h2>
+      <span className="tm-light">
+        Consolidated culturally-adapted content ready for final review
+      </span>
+    </div>
+
+    {/* Metrics Cards */}
+    <div className="tm-draft-metrics">
+      <div className="tm-metric-card">
+        <span className="tm-metric-value blue">{draftMetrics.segments}</span>
+        <span className="tm-metric-label">Segments</span>
+      </div>
+      <div className="tm-metric-card">
+        <span className="tm-metric-value green">{draftMetrics.changesApplied}</span>
+        <span className="tm-metric-label">Changes Applied</span>
+      </div>
+      <div className="tm-metric-card">
+        <span className="tm-metric-value orange">{draftMetrics.flagged}</span>
+        <span className="tm-metric-label">Flagged for Review</span>
+      </div>
+      <div className="tm-metric-card">
+        <span className="tm-metric-value dark">{draftMetrics.culturalScore}</span>
+        <span className="tm-metric-label">Cultural Score</span>
+      </div>
+    </div>
+
+    {/* Main Draft Content */}
+    <div className="tm-draft-main-card">
+      <div className="tm-draft-card-head">
+        <h3 className="tm-card-title">Final Culturally-Adapted Translation</h3>
+        <div className="tm-draft-actions">
+          <button className="tm-btn outline small">
+            <span className="icon-magic">✨</span> Regenerate
+          </button>
+          <button
+            className="tm-btn outline small"
+            onClick={() => navigator.clipboard.writeText(fullDraftText)}
+          >
+            <span className="icon-copy">❐</span> Copy to Clipboard
+          </button>
+        </div>
+      </div>
+      <div className="tm-draft-text-area">
+        <pre>{fullDraftText}</pre>
+      </div>
+    </div>
+
+    {/* Summary Panel (Collapsible placeholder) */}
+    <div className="tm-draft-summary-card">
+      <h3 className="tm-card-title">Cultural Adaptation Summary</h3>
+    </div>
+  </div>
+) : (
           /* ============= INTELLIGENCE REPORT VIEW ============= */
           <div className="tm-report-container">
             {/* Header */}
-            <div className="tm-report-header">
-              <h2 className="tm-page-subtitle">Cultural Intelligence Report</h2>
+           
+
+             <div className="tm-report-header">
+              {/* <h2 className="tm-page-subtitle">Cultural Intelligence Report</h2>
               <span className="tm-light">
                 Comprehensive analysis of cultural adaptations
-              </span>
-
+              </span>  */}
+ <div className="tm-draft-header-section">
+      <h2 className="tm-page-subtitle">Cultural Intelligence Report</h2>
+      <span className="tm-light">
+      Comprehensive analysis of cultural adaptations
+      </span>
+    </div>
               <div className="tm-report-actions">
                 <button
                   className="tm-btn outline small"
@@ -1306,226 +1625,184 @@ export default function CulturalAdaptationWorkspace({
 
         {/* ---------- AI Analysis Modal ---------- */}
         <Modal
-          open={isAnalysisOpen}
-          onClose={() => setIsAnalysisOpen(false)}
-          ariaLabel={`AI Cultural Analysis - ${
-            selectedResolved ? `Segment ${selectedResolved.index}` : ""
-          }`}
-        >
-          <div className="ai-modal-header">
-            <span className="tm-chip soft">
-              🧠 AI Cultural Analysis -{" "}
-              {selectedResolved ? `Segment ${selectedResolved.index}` : ""}
-            </span>
-            {selectedResolved && (
-              <div className="tm-light" style={{ marginTop: 4 }}>
-                {selectedResolved.title}
-              </div>
-            )}
-          </div>
+  open={isAnalysisOpen}
+  onClose={() => setIsAnalysisOpen(false)}
+  ariaLabel={`AI Cultural Analysis - ${
+    selectedResolved ? `Segment ${selectedResolved.index}` : ""
+  }`}
+>
+  {/* HEADER (not scrollable) */}
+  <div className="tm-modal-header1">
+    <div className="ai-modal-header">
+      <span className="tm-chip soft">
+        🧠 AI Cultural Analysis{" "}
+        {selectedResolved ? `- Segment ${selectedResolved.index}` : ""}
+      </span>
+      {/* {selectedResolved && (
+        <div className="tm-light" style={{ marginTop: 4 }}>
+          {selectedResolved.title}
+        </div>
+      )} */}
+    </div>
+  </div>
 
-          <div className="ai-summary">
-            {isAnalyzing && <div className="tm-loading">Analyzing…</div>}
-            {analysisError && (
-              <div className="tm-inline-error" role="alert">
-                {analysisError}
-              </div>
-            )}
+  {/* BODY (scrollable) */}
+  <div className="tm-modal-body">
+    <div className="ai-summary">
+      {isAnalyzing && <div className="tm-loading">Analyzing…</div>}
+      {analysisError && (
+        <div className="tm-inline-error" role="alert">
+          {analysisError}
+        </div>
+      )}
 
-            {!isAnalyzing &&
-              !analysisError &&
-              selectedResolved &&
-              analysisBySegment[selectedResolved.id] && (
+      {!isAnalyzing &&
+        !analysisError &&
+        selectedResolved &&
+        analysisBySegment[selectedResolved.id] && (
+          <>
+            {(() => {
+              const analysis = analysisBySegment[selectedResolved.id];
+
+              return (
                 <>
-                  {(() => {
-                    const analysis = analysisBySegment[selectedResolved.id];
+                  {/* Overall */}
+                  <div className="ai-overall">
+                    <div className="ai-overall-left">
+                      <div className="ai-overall-label">Overall Score</div>
+                      <div className="ai-overall-score">
+                        <span className="ai-score-number">
+                          {analysis.overallScore}
+                        </span>
+                        <span className="ai-score-total">/100</span>
+                      </div>
+                    </div>
+                    <div className="ai-overall-right">
+                      <span
+                        className={`ai-status-badge ${
+                          analysis.needsStatus
+                            ? analysis.needsStatus.replace(/\s+/g, "-").toLowerCase()
+                            : ""
+                        }`}
+                      >
+                        {analysis.needsStatus || "—"}
+                      </span>
+                    </div>
+                  </div>
 
-                    return (
-                      <>
-                        {/* Overall */}
-                        <div className="ai-overall">
-                          <div className="ai-overall-left">
-                            <div className="ai-overall-label">Overall Score</div>
-                            <div className="ai-overall-score">
-                              <span className="ai-score-number">
-                                {analysis.overallScore}
-                              </span>
-                              <span className="ai-score-total">/100</span>
+                  {/* Sections */}
+                  <div className="ai-sections">
+                    {Array.isArray(analysis.sections) && analysis.sections.length > 0 ? (
+                      analysis.sections.map((sec) => (
+                        <div key={sec.id} className="ai-section">
+                          <div className="ai-section-head">
+                            <span className="tm-chip">{sec.title}</span>
+                            <div className="ai-section-score">
+                              <span>{sec.score ?? "--"}/100</span>
                             </div>
                           </div>
-                          <div className="ai-overall-right">
-                            <span
-                              className={`ai-status-badge ${
-                                analysis.needsStatus
-                                  ? analysis.needsStatus.replace(/\s+/g, "-").toLowerCase()
-                                  : ""
-                              }`}
-                            >
-                              {analysis.needsStatus || "—"}
-                            </span>
-                          </div>
-                        </div>
 
-                        {/* Sections (translation/problem/suggestion) */}
-                        <div className="ai-sections">
-                          {Array.isArray(analysis.sections) &&
-                          analysis.sections.length > 0 ? (
-                            analysis.sections.map((sec) => (
-                              <div key={sec.id} className="ai-section">
-                                <div className="ai-section-head">
-                                  <span className="tm-chip">{sec.title}</span>
-                                  <div className="ai-section-score">
-                                    <span>{sec.score ?? "--"}/100</span>
+                          {Array.isArray(sec.issues) &&
+                            sec.issues.map((issue, idx) => (
+                              <div key={idx} className="ai-issue-card">
+                                <div className="ai-issue-meta">
+                                  <span className="ai-issue-priority">
+                                    {issue.priority?.toUpperCase()} PRIORITY ISSUE
+                                  </span>
+                                </div>
+
+                                <div className="ai-issue-block">
+                                  <div className="ai-issue-label">Translation:</div>
+                                  <div className="ai-issue-content">
+                                    {issue.translation?.trim()?.length
+                                      ? issue.translation
+                                      : selectedResolved?.translated?.trim()?.length
+                                      ? selectedResolved.translated
+                                      : "— No translation provided —"}
                                   </div>
                                 </div>
 
-                                {Array.isArray(sec.issues) &&
-                                  sec.issues.map((issue, idx) => (
-                                    <div key={idx} className="ai-issue-card">
-                                      <div className="ai-issue-meta">
-                                        <span className="ai-issue-priority">
-                                          {issue.priority?.toUpperCase()} PRIORITY ISSUE
-                                        </span>
-                                      </div>
+                                <div className="ai-issue-block">
+                                  <div className="ai-issue-label">Problem:</div>
+                                  <div className="ai-issue-content">
+                                    {issue.problem || "—"}
+                                  </div>
+                                </div>
 
-                                      <div className="ai-issue-block">
-                                        <div className="ai-issue-label">Translation:</div>
-                                        <div className="ai-issue-content">
-                                          {issue.translation?.trim()?.length
-                                            ? issue.translation
-                                            : selectedResolved?.translated?.trim()?.length
-                                            ? selectedResolved.translated
-                                            : "— No translation provided —"}
-                                        </div>
-                                      </div>
+                                <div className="ai-issue-block">
+                                  <div className="ai-issue-label">Suggestion</div>
+                                  <div className="ai-issue-content">
+                                    {issue.suggestion || "—"}
+                                  </div>
+                                </div>
 
-                                      <div className="ai-issue-block">
-                                        <div className="ai-issue-label">Problem:</div>
-                                        <div className="ai-issue-content">
-                                          {issue.problem || "—"}
-                                        </div>
-                                      </div>
-
-                                      <div className="ai-issue-block">
-                                        <div className="ai-issue-label">Suggestion</div>
-                                        <div className="ai-issue-content">
-                                          {issue.suggestion || "—"}
-                                        </div>
-                                      </div>
-
-                                      <div className="ai-issue-actions">
-                                        <button
-                                          className="tm-btn primary"
-                                          onClick={() =>
-                                            handleAcceptSuggestion(issue.suggestion)
-                                          }
-                                        >
-                                          Accept Suggestion
-                                        </button>
-                                        <button className="tm-btn outline">
-                                          Flag for Review
-                                        </button>
-                                        <button className="tm-btn ghost">Dismiss</button>
-                                      </div>
-                                    </div>
-                                  ))}
+                                <div className="ai-issue-actions">
+                                  <button
+                                    className="tm-btn primary"
+                                    onClick={() => handleAcceptSuggestion(issue.suggestion)}
+                                  >
+                                    Accept Suggestion
+                                  </button>
+                                  <button className="tm-btn outline">
+                                    Flag for Review
+                                  </button>
+                                  <button className="tm-btn ghost">Dismiss</button>
+                                </div>
                               </div>
-                            ))
-                          ) : (
-                            <div className="tm-light">No section details provided.</div>
-                          )}
+                            ))}
                         </div>
+                      ))
+                    ) : (
+                      <div className="tm-light">No section details provided.</div>
+                    )}
+                  </div>
 
-                        {/* Terminology Validation (shows suggestionA/B) */}
-                        <TerminologyValidationPanel
-                          score={analysis.overallScore}
-                          altList={Array.isArray(analysis.alternatives) ? analysis.alternatives : []}
-                          onApplyAlt={(text) => handleApplyAlternative(text)}
-                          selectedMap={segChipSelections}
-                          onSelectChip={(termId, val) => setChipSelectionForSeg(termId, val)}
-                        />
-
-                        {/* Modal actions */}
-                        <div className="ai-footer-actions">
-                          <button
-                            className="tm-btn primary outline"
-                            onClick={() => setIsAnalysisOpen(false)}
-                          >
-                            Close
-                          </button>
-                          <button className="tm-btn primary" onClick={handleReanalyze}>
-                            Re-analyze
-                          </button>
-                          <button
-                            className="tm-btn primary"
-                            onClick={handleModalReviewedAndContinue}
-                          >
-                            Mark as Reviewed &amp; Continue
-                          </button>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  {/* Terminology Validation */}
+                  <TerminologyValidationPanel
+                    score={analysis.overallScore}
+                    altList={Array.isArray(analysis.alternatives) ? analysis.alternatives : []}
+                    onApplyAlt={(text) => handleApplyAlternative(text)}
+                    selectedMap={segChipSelections}
+                    onSelectChip={(termId, val) => setChipSelectionForSeg(termId, val)}
+                  />
                 </>
-              )}
-          </div>
-        </Modal>
+              );
+            })()}
+          </>
+        )}
+    </div>
+  </div>
+
+  {/* FOOTER (fixed, not scrollable) */}
+  <div className="tm-modal-footer">
+    <div className="ai-footer-actions">
+      <button className="tm-btn outline" onClick={() => setIsAnalysisOpen(false)}>
+        Close
+      </button>
+      <button className="tm-btn primary" onClick={handleReanalyze}>
+        Re-analyze
+      </button>
+      <button className="tm-btn primary" onClick={handleModalReviewedAndContinue}>
+        Mark as Reviewed &amp; Continue
+      </button>
+    </div>
+  </div>
+</Modal>
       </div>
+    </div>
     </div>
   );
 }
 
 /* Sidebar phases */
 const SIDEBAR_PHASES = [
-  {
-    id: 1,
-    name: "Global Context Capture",
-    sub: "Source content analysis",
-    status: "done",
-    iconClass: "icon-context",
-  },
-  {
-    id: 2,
-    name: "Smart TM Translation",
-    sub: "AI-powered translation",
-    status: "done",
-    iconClass: "icon-translation",
-  },
-  {
-    id: 3,
-    name: "Cultural Intelligence",
-    sub: "Cultural adaptation",
-    status: "active",
-    iconClass: "icon-culture",
-  },
-  {
-    id: 4,
-    name: "Regulatory Compliance",
-    sub: "Compliance validation",
-    status: "todo",
-    iconClass: "icon-compliance",
-  },
-  {
-    id: 5,
-    name: "Quality Intelligence",
-    sub: "Quality assurance",
-    status: "todo",
-    iconClass: "icon-quality",
-  },
-  {
-    id: 6,
-    name: "DAM Integration",
-    sub: "Asset packaging",
-    status: "todo",
-    iconClass: "icon-dam",
-  },
-  {
-    id: 7,
-    name: "Integration Lineage",
-    sub: "System integration",
-    status: "todo",
-    iconClass: "icon-integration",
-  },
+  { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
+  { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "done", iconClass: "icon-translation" },
+  { id: 'P3', name: "Cultural Intelligence", sub: "Cultural adaptation", status: "active", iconClass: "icon-culture" },
+  { id: 'P4', name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
+  { id: 'P5', name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
+  { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
+  { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
 ];
 
 /** ========= Simple Reusable Modal ========= */
