@@ -39,6 +39,16 @@ const rec = getProject(projectId);
 console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.length);
 
   const projectRec = React.useMemo(() => getProject(projectId), [projectId]);
+
+  const persistedSegmentsP3 = React.useMemo(
+    () =>
+          (projectRec?.meta?.segmentsP3 &&
+            Array.isArray(projectRec.meta.segmentsP3))
+            ? projectRec.meta.segmentsP3
+            : [],
+        [projectRec]
+      );
+
    const persistedSegmentsP2 = React.useMemo(
      () => (projectRec?.meta?.segmentsP2 && Array.isArray(projectRec.meta.segmentsP2))
            ? projectRec.meta.segmentsP2
@@ -114,16 +124,18 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
     }
     return "";
   };
-
-  const getCIStatus = (seg, overrides) => {
-    const o = overrides?.[seg.id] || {};
-    const status = String(
-      o.status ?? seg.status ?? o.ciStatus ?? seg.ciStatus ?? ""
-    ).toLowerCase();
-    if (status === "reviewed") return "Reviewed";
-    return "Pending"; // stay Pending until user explicitly clicks "Mark as Reviewed"
-  };
-
+  
+const getCIStatus = (seg, overrides) => {
+     const o = overrides?.[seg.id] || {};
+     const status = String(
+       // Prefer overrides first, then *ciStatus* from persisted P3, then last fall back to plain status
+       o.status ?? o.ciStatus ?? seg.ciStatus ?? seg.status ?? ""
+     ).toLowerCase();
+     if (status === "reviewed") return "Reviewed";
+     if (status === "completed") return "Reviewed"; // optional: treat Completed as Reviewed in the pill
+     return "Pending";
+};
+  
   /** ========= Helpers to parse TPS (translation/problem/suggestion) ========= */
   const tryParseJSON = (str) => {
     try {
@@ -357,15 +369,17 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
       
     
 const rawCandidate =
-    (Array.isArray(state?.segments) && state.segments.length > 0)
-      ? state.segments
-      : (Array.isArray(persistedSegmentsP2) && persistedSegmentsP2.length > 0)
-      ? persistedSegmentsP2
-      : (Array.isArray(persistedSegmentsP1) && persistedSegmentsP1.length > 0)
-      ? persistedSegmentsP1
-      : (Array.isArray(segmentsProp) && segmentsProp.length > 0)
-      ? segmentsProp
-      : [];
+       (Array.isArray(persistedSegmentsP3) && persistedSegmentsP3.length > 0)
+         ? persistedSegmentsP3
+         : (Array.isArray(state?.segments) && state.segments.length > 0)
+         ? state.segments
+         : (Array.isArray(persistedSegmentsP2) && persistedSegmentsP2.length > 0)
+         ? persistedSegmentsP2
+         : (Array.isArray(persistedSegmentsP1) && persistedSegmentsP1.length > 0)
+         ? persistedSegmentsP1
+         : (Array.isArray(segmentsProp) && segmentsProp.length > 0)
+         ? segmentsProp
+         : [];
 
 //     return (rawCandidate || [])
 //       .map((seg, i) => {
@@ -416,7 +430,7 @@ return (rawCandidate || [])
     }))
     .filter(s => s.source.trim().length > 0)
     .sort((a, b) => a.index - b.index);
-}, [state?.segments, segmentsProp,  therapyArea, persistedSegmentsP2, persistedSegmentsP1, state?.lang]);
+}, [state?.segments, segmentsProp,  therapyArea, persistedSegmentsP3, persistedSegmentsP2, persistedSegmentsP1, state?.lang]);
 
   /** Selected segment */
   const [selectedId, setSelectedId] = useState(null);
@@ -470,8 +484,12 @@ useEffect(() => {
     const total = segments.length || progressItemsProp.total || 0;
     const reviewed = segments.filter((s) => {
       // Check overlays first
-      const o = segOverrides[s.id];
-      const status = String(o?.status ?? "Pending").toLowerCase();
+      // const o = segOverrides[s.id];
+      // const status = String(o?.status ?? "Pending").toLowerCase();
+      const o = segOverrides[s.id] || {};
+       const status = String(
+         o.status ?? o.ciStatus ?? s.ciStatus ?? s.status ?? "Pending"
+       ).toLowerCase();
       return status === "completed" || status === "reviewed";
       // const adapted = (o?.adapted ?? s.adapted ?? "").trim();
       // return adapted.length > 0;
@@ -483,6 +501,20 @@ useEffect(() => {
     const pct = (progressItems.reviewed / Math.max(progressItems.total, 1)) * 100;
     return Math.round(pct);
   }, [progressItems]);
+
+  //  useEffect(() => {
+  //      if (!projectId || segments.length === 0) return;
+  //      const mergedSegments = segments.map((s) => {
+  //        const o = segOverrides[s.id] || {};
+  //        return {
+  //         ...s,
+  //          ...(o.adapted !== undefined ? { adapted: o.adapted } : {}),
+  //          ...(o.status  !== undefined ? { ciStatus: o.status } : {}),
+  //          ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
+  //        };
+  //      });
+  //      updateProjectMeta(projectId, { segmentsP3: mergedSegments });
+  //    }, [projectId, segments, segOverrides]);
 
   /** ---------- Gate modal before entering Draft tab ---------- */
   const [isDraftGateOpen, setIsDraftGateOpen] = useState(false);
@@ -556,6 +588,8 @@ useEffect(() => {
         ...s,
         ...(o.adapted !== undefined ? { adapted: o.adapted } : {}),
         // ...(o.status !== undefined ? { status: o.status } : {}),
+        // ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
+        ...(o.status !== undefined ? { ciStatus: o.status } : {}),
         ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
       };
     });
@@ -585,6 +619,7 @@ useEffect(() => {
       [selectedResolved.id]: {
         ...prev[selectedResolved.id],
         status: "Reviewed",
+        ciStatus: "Reviewed",        // mirror for persistence/read-back
       },
     }));
   };
