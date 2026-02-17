@@ -1,59 +1,125 @@
-import React, { useEffect, useMemo, useState } from "react";
+
+import React, { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
-
+import { getProject, updateProjectMeta, markPhaseComplete } from '../lib/progressStore';
+import { usePhaseNavigation } from "./PhaseNav.jsx";
+import "./css/Regulatory.css";
+import {  ArrowLeft,
+  Save, ArrowRight, Flag, Upload, FileText, CheckCircle2, Maximize2, BarChart3, FileDown, Brain,Shield,
+  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react';
 /**
- * Regulatory Compliance Workspace
- * - Run Compliance Check: posts adapted text to n8n and DISPLAYS returned items under Critical Issues.
- * - Critical Issues show ONLY n8n results.
- * - Recommended Changes show ONLY recommendation1 and recommendation2 from n8n.
- * - All other UI/sections/buttons remain unchanged.
+ * Regulatory Compliance Hub (Destination page)
+ * - 3 Tabs: Compliance Review | Compliance Report | Regulatory Intelligence
+ * - Two cards: Left segments, Right detail (Source | Adapted | Compliant)
  */
-export default function RegulatoryComplianceWorkspace({
+export default function RegulatoryComplianceHub({
   projectName: projectNameProp = "No project name to display",
   therapyArea = "Respiratory · DE",
+  progressItems: progressItemsProp = { approved: 0, total: 15 },
   segments: segmentsProp = [],
 }) {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  const projectName = state?.projectName ?? projectNameProp;
+  const projectId = state?.projectId;
+   const projectName = state?.projectName ?? projectNameProp;
+   const gotoPhase = usePhaseNavigation(projectId, projectName);
+  
+  /** Tabs */
+  // const [activeTab, setActiveTab] = useState("review"); 
 
-  // ===== n8n Endpoint (configure via env) =====
-  const N8N_COMPLIANCE_URL =
-    (typeof import.meta !== "undefined" &&
-      import.meta.env &&
-      import.meta.env.VITE_N8N_COMPLIANCE_URL) ||
-    process.env.REACT_APP_N8N_COMPLIANCE_URL ||
-    "http://172.16.4.237:8010/webhook/regulatory";
+  
+const projectRec = useMemo(() => getProject(projectId), [projectId]);
 
-  /* ================= LANGUAGE HELPERS ================= */
-  const getTargetLang = (therapyAreaStr) => {
-    const m = String(therapyAreaStr || "").match(/·\s*([A-Za-z-]+)/);
-    return m?.[1] || "DE";
+const persistedSegmentsP4 = useMemo(
+    () =>
+      (projectRec?.meta?.segmentsP4 && Array.isArray(projectRec.meta.segmentsP4))
+        ? projectRec.meta.segmentsP4
+        : [],
+    [projectRec]
+  );
+  
+ const persistedSegmentsP3 = useMemo(
+   () => (projectRec?.meta?.segmentsP3 && Array.isArray(projectRec.meta.segmentsP3))
+         ? projectRec.meta.segmentsP3 : [],
+   [projectRec]
+ );
+ const persistedSegmentsP2 = useMemo(
+   () => (projectRec?.meta?.segmentsP2 && Array.isArray(projectRec.meta.segmentsP2))
+         ? projectRec.meta.segmentsP2 : [],
+   [projectRec]
+ );
+
+
+
+ // --- Focus mode state (unique key for Cultural page) ---
+const [isFocusMode, setIsFocusMode] = useState(() => {
+  const v = localStorage.getItem('ci_focus_mode');
+  return v === 'true';
+});
+
+const toggleFocusMode = () => setIsFocusMode(prev => !prev);
+
+// persist on change
+useEffect(() => {
+  localStorage.setItem('ci_focus_mode', String(isFocusMode));
+}, [isFocusMode]);
+
+// keyboard: F to focus, Esc to exit
+useEffect(() => {
+  const onKey = (e) => {
+    const k = String(e.key || '').toLowerCase();
+    if (k === 'f') setIsFocusMode(true);
+    if (k === 'escape') setIsFocusMode(false);
   };
+  window.addEventListener('keydown', onKey);
+  return () => window.removeEventListener('keydown', onKey);
+}, []);
 
-  /* ================= SEGMENTS NORMALIZATION ================= */
+// ===== n8n Endpoint (configure via env) =====
+const N8N_COMPLIANCE_URL =
+(typeof import.meta !== "undefined" &&
+  import.meta.env &&
+  import.meta.env.VITE_N8N_COMPLIANCE_URL) ||
+process.env.REACT_APP_N8N_COMPLIANCE_URL ||
+"http://172.16.4.237:8015/webhook-test/regulatory";
+
+/* ================= LANGUAGE HELPERS ================= */
+const getTargetLang = (therapyAreaStr) => {
+  const m = String(therapyAreaStr || "").match(/·\s*([A-Za-z-]+)/);
+  return m?.[1] || "DE";
+};
+
+  /** Normalize incoming segments from router state */
   const segments = useMemo(() => {
     const raw = Array.isArray(state?.segments)
-      ? state.segments
-      : Array.isArray(segmentsProp)
-      ? segmentsProp
-      : [];
+      // ? state.segments
+      // : Array.isArray(segmentsProp)
+      // ? segmentsProp
+      // : [];
 
-    const targetFromTherapy = getTargetLang(therapyArea);
+      
+const rawCandidate =
+   (Array.isArray(state?.segments) && state.segments.length > 0)
+     ? state.segments
+     : (Array.isArray(persistedSegmentsP4) && persistedSegmentsP4.length > 0)
+     ? persistedSegmentsP4
+     : (Array.isArray(persistedSegmentsP3) && persistedSegmentsP3.length > 0)
+     ? persistedSegmentsP3
+     : (Array.isArray(persistedSegmentsP2) && persistedSegmentsP2.length > 0)
+     ? persistedSegmentsP2
+     : (Array.isArray(segmentsProp) && segmentsProp.length > 0)
+     ? segmentsProp
+     : [];
 
-    return (raw || [])
+      
+    return (rawCandidate || [])
       .map((seg, i) => {
         const index = typeof seg.index === "number" ? seg.index : i + 1;
         const source = String(seg.source ?? "");
-        const translated = String(seg.translated ?? "");
-        const adapted = String(seg.adapted ?? ""); // from Phase 3
-        const title =
-          seg.title ||
-          seg.assetTitle ||
-          source.split(/\r?\n/)[0] ||
-          `Segment ${index}`;
+        const adapted = String(seg.adapted ?? seg.culturallyAdapted ?? seg.translated ?? ""); // phase 3 result if present
+        const compliant = String(seg.compliant ?? ""); // phase 4 will fill this
         const words =
           typeof seg.words === "number"
             ? seg.words
@@ -62,29 +128,81 @@ export default function RegulatoryComplianceWorkspace({
         return {
           id: seg.id ?? `seg-${index}`,
           index,
-          title,
           source,
-          translated,
-          adapted,
+          adapted,   // shown under "Culturally Adapted Text (Phase 3)"
+          compliant, // shown under "Regulatory Compliant Text"
           words,
-          lang: seg.lang ?? targetFromTherapy ?? "EN",
-          status: seg.status ?? "Pending", // Pending | Approved | Flagged
+          status: seg.status ?? (adapted.trim() ? "Pending" : "Pending"),
+          lang: seg.lang ?? "EN",
+          complianceScore: typeof seg.complianceScore === "number" ? seg.complianceScore : null,
         };
       })
       .filter((s) => s.source.trim().length > 0)
       .sort((a, b) => a.index - b.index);
-  }, [state?.segments, segmentsProp, therapyArea]);
+  // }, [state?.segments, segmentsProp]);
+}, [state?.segments, segmentsProp, persistedSegmentsP3, persistedSegmentsP2]);
 
-  /* ================= SELECTION ================= */
+  /** Selected segment */
   const [selectedId, setSelectedId] = useState(null);
   useEffect(() => {
     if (!selectedId && segments.length) setSelectedId(segments[0].id);
   }, [segments, selectedId]);
-
   const selected = useMemo(
     () => segments.find((s) => s.id === selectedId) || null,
     [segments, selectedId]
   );
+
+  /** Local UI state for score & compliant text (per selection) */
+  const [scoreById, setScoreById] = useState({});
+  const [compliantById, setCompliantById] = useState({});
+
+
+  // useEffect(() => {
+  //   const initialScores = {};
+  //   const initialCompliant = {};
+  //   segments.forEach((s) => {
+  //     if (typeof s.complianceScore === "number") initialScores[s.id] = s.complianceScore;
+  //     if (s.compliant?.trim()) initialCompliant[s.id] = s.compliant;
+  //   });
+  //   setScoreById((prev) => ({ ...initialScores, ...prev }));
+  //   setCompliantById((prev) => ({ ...initialCompliant, ...prev }));
+  // }, [segments.length]);
+
+  useEffect(() => {
+    // hydrate from incoming segment score/compliant if provided
+    const initialScores = {};
+    const initialCompliant = {};
+   const initialOverrides = {};
+
+    segments.forEach((s) => {
+      if (typeof s.complianceScore === "number") initialScores[s.id] = s.complianceScore;
+      if (s.compliant?.trim()) initialCompliant[s.id] = s.compliant;
+ 
+     if (
+       s.status || s.compliantText || s.mlr || s.mlrDefer || s.acceptedRisk || s.blocked
+     ) {
+      initialOverrides[s.id] = {
+        ...(s.status ? { status: s.status } : {}),
+        ...(s.compliantText ? { compliantText: s.compliantText } : {}),
+         ...(s.mlr ? { mlr: s.mlr } : {}),
+         ...(s.mlrDefer ? { mlrDefer: s.mlrDefer } : {}),
+        ...(s.acceptedRisk ? { acceptedRisk: s.acceptedRisk } : {}),
+         ...(s.blocked ? { blocked: s.blocked } : {}),
+       };
+     }
+    });
+    setScoreById((prev) => ({ ...initialScores, ...prev }));
+    setCompliantById((prev) => ({ ...initialCompliant, ...prev }));
+   setSegOverrides((prev) => ({ ...initialOverrides, ...prev }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segments.length]);
+ 
+  /** Progress (approved count) */
+  const progressItems = useMemo(() => {
+    const total = segments.length || progressItemsProp.total || 0;
+    const approved = segments.filter((s) => (compliantById[s.id] || s.compliant || "").trim().length > 0).length;
+    return total > 0 ? { approved, total } : progressItemsProp;
+  }, [segments, compliantById, progressItemsProp]);
 
   /* ================= PER-SEGMENT OVERRIDES ================= */
   const [segOverrides, setSegOverrides] = useState({});
@@ -95,35 +213,85 @@ export default function RegulatoryComplianceWorkspace({
 
   const currentSegOverride = segOverrides[selectedResolved?.id] || {};
 
-  /* ================= PROGRESS ================= */
-  const approvedCount = useMemo(() => {
-    return segments.filter((s) => {
-      const o = segOverrides[s.id] || {};
-      const status = String(o.status ?? s.status ?? "Pending").toLowerCase();
-      return status === "approved";
-    }).length;
-  }, [segments, segOverrides]);
+  
 
-  const flaggedCount = useMemo(() => {
-    return segments.filter((s) => {
-      const o = segOverrides[s.id] || {};
-      const status = String(o.status ?? s.status ?? "Pending").toLowerCase();
-      return status === "flagged";
-    }).length;
-  }, [segments, segOverrides]);
+// const approvedCount = useMemo(() => {
+//   return segments.filter((s) => {
+//     const text = (compliantById[s.id] ?? s.compliant ?? "").trim();
+//     return text.length > 0;
+//   }).length;
+// }, [segments, compliantById]);
 
-  const changedCount = useMemo(() => {
-    return segments.filter((s) => {
-      const o = segOverrides[s.id] || {};
-      return Boolean((o.compliantText || "").trim());
-    }).length;
-  }, [segments, segOverrides]);
+const buildP4Segments = () =>
+  segments.map((s) => {
+    const o = segOverrides[s.id] || {};
+    return {
+      ...s,
+      complianceScore: scoreById[s.id] ?? s.complianceScore ?? null,
+      compliant: compliantById[s.id] ?? s.compliant ?? "",
+      status: o.status ?? s.status ?? "Pending",
+      ...(o.compliantText ? { compliantText: o.compliantText } : {}),
+      ...(o.mlr ? { mlr: o.mlr } : {}),
+      ...(o.mlrDefer ? { mlrDefer: o.mlrDefer } : {}),
+      ...(o.acceptedRisk ? { acceptedRisk: o.acceptedRisk } : {}),
+      ...(o.blocked ? { blocked: o.blocked } : {}),
+    };
+  });
 
-  const totalCount = segments.length;
-  const progressPct = Math.round((approvedCount / Math.max(totalCount, 1)) * 100);
+  useEffect(() => {
+      if (!projectId) return;
+      try {
+      updateProjectMeta(projectId, { segmentsP4: buildP4Segments() });
+      } catch {}
+    }, [projectId, segOverrides, scoreById, compliantById, segments]);
 
-  /* ================= MAIN TABS (Top) ================= */
-  const [mainTab, setMainTab] = useState("review"); // review | report | intel
+/* ================= PROGRESS ================= */
+const approvedCount = useMemo(() => {
+  return segments.filter((s) => {
+    const o = segOverrides[s.id] || {};
+    const status = String(o.status ?? s.status ?? "Pending").toLowerCase();
+    return status === "approved";
+  }).length;
+}, [segments, segOverrides]);
+
+const flaggedCount = useMemo(() => {
+  return segments.filter((s) => {
+    const o = segOverrides[s.id] || {};
+    const status = String(o.status ?? s.status ?? "Pending").toLowerCase();
+    return status === "flagged";
+  }).length;
+}, [segments, segOverrides]);
+
+const changedCount = useMemo(() => {
+  return segments.filter((s) => {
+    const o = segOverrides[s.id] || {};
+    return Boolean((o.compliantText || "").trim());
+  }).length;
+}, [segments, segOverrides]);
+
+const totalCount = segments.length;
+const progressPct = Math.round((approvedCount / Math.max(totalCount, 1)) * 100);
+
+  // const progressPct = useMemo(() => {
+  //   const pct = (progressItems.approved / Math.max(progressItems.total, 1)) * 100;
+  //   return Math.round(pct);
+  // }, [progressItems]);
+
+  /** Sidebar: retain context when moving across phases */
+  const handlePhaseClick = (phaseName) => {
+    if (phaseName === "Global Context Capture") {
+      navigate("/globalAssetCapture", { state: { projectName, segments } });
+    }
+    if (phaseName === "Smart TM Translation") {
+      navigate("/smartTMTranslationHub", { state: { projectName, segments } });
+    }
+    if (phaseName === "Cultural Intelligence") {
+      navigate("/culturalAdaptationWorkspace", { state: { projectName, segments } });
+    }
+  };
+
+   /* ================= MAIN TABS (Top) ================= */
+   const [mainTab, setMainTab] = useState("review"); // review | report | intel
 
   /* ================= ANALYSIS MODAL (n8n renders-only under Critical Issues & Recommendations) ================= */
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
@@ -379,8 +547,8 @@ export default function RegulatoryComplianceWorkspace({
     }));
   };
 
-  /* ============ Analysis actions ============ */
-  const applyCompliantSuggestion = () => {
+   /* ============ Analysis actions ============ */
+   const applyCompliantSuggestion = () => {
     const suggestion =
       "Suggested compliant edit: Replace broad ‘efficacy’ references with approved SmPC-aligned wording and include the necessary disclaimers per HWG.";
     setCompliantEditorValue(
@@ -601,260 +769,410 @@ export default function RegulatoryComplianceWorkspace({
     URL.revokeObjectURL(url);
   };
 
-  /* ================= Render ================= */
+
+  /** Actions on detail panel */
+  const runComplianceCheck = () => {
+    if (!selected) return;
+    // naive score demo: based on length and presence of certain terms
+    const base = Math.min(100, Math.round(selected.adapted.length / 3));
+    const hasBrand = /ofev|nintedanib/i.test(selected.adapted);
+    const hasRisk = /risk|warning|contraindication/i.test(selected.adapted);
+    const score = Math.max(0, Math.min(100, base + (hasBrand ? 10 : 0) + (hasRisk ? 8 : 0)));
+
+    setScoreById((prev) => ({ ...prev, [selected.id]: score }));
+  };
+
+  const flagForReview = () => {
+    if (!selected) return;
+    // Just toggle a marker (you can persist if needed)
+    alert(`Segment ${selected.index} flagged for regulatory review.`);
+  };
+
+  const approveCompliant = () => {
+    if (!selected) return;
+    // For demo: set compliant to adapted, you can pipe to your API
+    const text = selected.adapted?.trim().length ? selected.adapted : selected.source;
+    setCompliantById((prev) => ({ ...prev, [selected.id]: text }));
+  };
+
+  /** Complete Phase → next page (Quality Intelligence or your desired route) */
+  const handleCompletePhase = () => {
+    navigate("/qualityIntelligence", {
+      state: {
+        projectName,
+        segments: segments.map((s) => ({
+          ...s,
+          complianceScore: scoreById[s.id] ?? s.complianceScore ?? null,
+          compliant: compliantById[s.id] ?? s.compliant ?? "",
+        })),
+      },
+    });
+  };
+
   return (
-    <div className="rc-shell">
-      {/* LEFT WIZARD RAIL */}
-      <aside className="rc-rail" aria-label="Overall progress and workflow">
-        <div className="rc-rail-progress">
-          <div className="rc-rail-title">Overall Progress</div>
-          <div className="rc-rail-sub">
+    <div className={`regulatory tm-app ${isFocusMode ? 'is-focus' : ''}`}>
+      {/* Sidebar */}
+      <aside className="tm-sidebar">
+        <div className="tm-sidebar-progress">
+          {/* <div className="tm-progress-row">
+            <span className="tm-progress-label">Overall Progress</span>
+            <span className="tm-progress-value">{progressPct}%</span>
+          </div> */}
+          <div className="tm-progress-row">
+            <span className="tm-progress-label">Overall Progress</span>
+            {/* <span className="tm-progress-value">{progressPct}%</span> */}
+          </div>
+          <div className="tm-progress-sub">
+            {/* {progressItems.reviewed} / {progressItems.total} pieces completed */}
             {Math.max(approvedCount, 0)} / {Math.max(totalCount, 0)} pieces completed
-          </div>
-          <div
-            className="rc-rail-bar"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progressPct}
-          >
-            <div className="rc-rail-fill" style={{ width: `${progressPct}%` }} />
-            <span className="rc-rail-pct">{progressPct}%</span>
-          </div>
-        </div>
-
-        <nav className="rc-rail-steps">
-          {[
-            "Global Content Capture",
-            "Smart TM Translation",
-            "Cultural Intelligence",
-            "Regulatory Compliance",
-            "Quality Intelligence",
-            "DRM Integration",
-            "Integration Lineage",
-          ].map((label, idx) => {
-            const active = label === "Regulatory Compliance";
-            const done = idx < 3; // cosmetic
-            return (
-              <button
-                key={label}
-                className={`rc-rail-step ${active ? "is-active" : ""} ${
-                  done ? "is-done" : ""
-                }`}
-                type="button"
-                title={label}
-              >
-                <span className="rc-rail-dot" aria-hidden />
-                <span className="rc-rail-label">{label}</span>
-                {done && (
-                  <span className="rc-rail-check" aria-hidden>
-                    ✓
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* MAIN WORKSPACE COLUMN */}
-      <div className="rc-workspace">
-        {/* TOP BAR */}
-        <div className="rc-topbar">
-          <div className="rc-topbar-row">
-            <div className="rc-breadcrumbs">
-              <button className="rc-link" onClick={goBack}>
-                Main Hub
-              </button>
-              <span className="rc-bc-sep">›</span>
-              <button className="rc-link">Globalization Hub</button>
-              <span className="rc-bc-sep">›</span>
-              <span className="rc-project">{projectName}</span>
-              <span className="rc-tag">{therapyArea}</span>
-            </div>
-            <div className="rc-top-actions">
-              <button className="rc-btn ghost">Save</button>
-              <button className="rc-btn ghost">Focus</button>
-            </div>
-          </div>
-
-          <div className="rc-subtabs">
-            <button
-              className={mainTab === "review" ? "active" : ""}
-              onClick={() => setMainTab("review")}
-            >
-              Compliance Review
-            </button>
-            <button
-              className={mainTab === "report" ? "active" : ""}
-              onClick={() => setMainTab("report")}
-            >
-              Compliance Report
-            </button>
-            <button
-              className={mainTab === "intel" ? "active" : ""}
-              onClick={() => setMainTab("intel")}
-            >
-              Regulatory Intelligence
-            </button>
-          </div>
-        </div>
-
-        {/* HEADER (title + progress) */}
-        <header className="rc-header rc-header--screen">
-          <div className="rc-header-left">
-            <h2 className="rc-title">Regulatory Compliance Workspace</h2>
-            <span className="rc-sub">
-              Review culturally adapted content for regulatory compliance and market
-              requirements
-            </span>
-          </div>
-          <div className="rc-header-right">
-            <div className="rc-progress-wrap">
-              <span className="rc-progress-label">
-                Progress: {approvedCount} / {totalCount} approved
-              </span>
-              <div
-                className="rc-progressbar"
+          </div>  
+            <div
+                className="tm-progress-bar"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={progressPct}
               >
-                <div
-                  className="rc-progressbar-fill"
-                  style={{ width: `${progressPct}%` }}
-                />
+                <div className="tm-progress-fill" style={{ width: `${progressPct}%` }} />
+                {/* Percentage pill inside the bar (like pasted rail) */}
+                <span className="tm-progress-pct">{progressPct}%</span>
               </div>
-            </div>
+        </div>
+
+        <nav className="tm-phases">
+          {SIDEBAR_PHASES.map((p) => (
+            <button
+              key={p.id}
+              className={`tm-phase-item ${p.status} ${p.name === "Regulatory Compliance" ? "is-active" : ""}`}
+              aria-label={`Open ${p.name}`}
+              // onClick={() => handlePhaseClick(p.name)}
+              onClick={() => gotoPhase(p.id)}
+            >
+              <span className={`tm-phase-icon ${p.iconClass}`} />
+              <span className="tm-phase-text">
+                <span className="tm-phase-title">{p.name}</span>
+                <span className="tm-phase-sub">{p.sub}</span>
+              </span>
+              {p.status === "done" && <span className="tm-phase-check">✓</span>}
+              {p.name === "Regulatory Compliance" && <span className="tm-phase-dot" />}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main */}
+      <div className="tm-main">
+        {/* Header */}
+        <header className="tm-header">
+          <div className="tm-header-left">
+          <div className="tm-crumbs">
+      <button className="tm-crumb" onClick={() => navigate('/')}>
+        <ArrowLeft size={14} className="h-1 w-1 mr-2" /> Main Hub
+      </button>
+      <span className="tm-divider" />
+      <button className="tm-crumb" onClick={() => navigate('/glocalizationHub')}>
+        Glocalization Hub
+      </button>
+    </div>
+
+    <div className="tm-header-center">
+    <div className="tm-title-row">
+      <h1 className="tm-page-title">{projectName}</h1>
+      {/* <span className="tm-title-sub">{therapyArea}</span> */}
+    </div>
+  </div>
           </div>
+
+          <div className="tm-header-right">
+  <span className="tm-saved"> <CheckCircle2 size={12} className="h-1 w-1 text-green-600" />
+  Saved</span>
+
+    <button className="tm-btn ghost tm-btn-icon">
+    <Save size={15} className="h-4 w-4 mr-2" /> Save
+    </button>
+
+    <button
+      className="tm-btn ghost tm-btn-icon"
+      onClick={toggleFocusMode}
+      aria-pressed={isFocusMode}
+      title={isFocusMode ? 'Exit focus (Esc)' : 'Enter focus (F)'}
+    >
+      {isFocusMode ? (
+        <>
+          <Minimize2 size={16} /> Exit
+        </>
+      ) : (
+        <>
+          <Maximize2 size={16} /> Focus
+        </>
+      )}
+    </button>
+  </div>
         </header>
 
-        {/* MAIN CONTENT: TABS */}
+        {/* Tabs bar */}
+        <section className="tm-tabs-bar">
+          <div className="tm-tabs">
+            <button
+              className={`tm-tab ${mainTab === "review" ? "is-active" : ""}`}
+              onClick={() => setMainTab("review")}
+            >
+              Compliance Review
+            </button>
+            <button
+              className={`tm-tab ${mainTab === "report" ? "is-active" : ""}`}
+              onClick={() => setMainTab("report")}
+            >
+              Compliance Report
+            </button>
+            <button
+              className={`tm-tab ${mainTab === "intel" ? "is-active" : ""}`}
+              onClick={() => setMainTab("intel")}
+            >
+              Regulatory Intelligence
+            </button>
+          </div>
+
+          {/* <div className="tm-tabs-right">
+            <div className="tm-progress-inline">
+              <span className="tm-progress-inline-label">Progress:</span>
+              <span className="tm-progress-inline-value">
+                {progressItems.approved} / {progressItems.total} approved
+              </span>
+              <div className="tm-progress-inline-bar">
+                <div className="tm-progress-inline-fill" style={{ width: `${progressPct}%` }} />
+              </div>
+            </div>
+
+            <div className="tm-tabs-actions">
+              <button className="tm-btn outline">Generate PDF</button>
+              <button className="tm-btn primary" onClick={handleCompletePhase}>
+                Complete Phase 3
+              </button>
+            </div>
+          </div> */}
+        </section>
         {mainTab === "review" && (
-          <div className="rc-main">
-            {/* LEFT: Content Segments */}
-            <aside className="rc-left">
-              <div className="rc-left-head">
-                <div className="rc-left-title">Content Segments</div>
-                <div className="rc-left-sub">{segments.length} segments to review</div>
-              </div>
+        <div>
+        <section className="tm-tabs-right">
+  <div className="tm-status-left">
+    <h2 className="tm-section-title"><Shield size={20} className="h-5 w-5" />Regulatory Compliance Workspace</h2>
+    <p className="tm-section-sub">Review culturally adapted content for regulatory compliance and market requirements</p>
+  </div>
 
-              <div className="rc-seg-list">
-                {segments.map((seg) => {
-                  const isSelected = seg.id === selectedId;
-                  const o = segOverrides[seg.id] || {};
-                  const st = String(o.status ?? seg.status ?? "Pending").toLowerCase();
-                  const approved = st === "approved";
-                  return (
-                    <button
-                      key={seg.id}
-                      className={`rc-seg-item ${isSelected ? "is-selected" : ""}`}
-                      onClick={() => setSelectedId(seg.id)}
-                    >
-                      <div className="rc-seg-top">
-                        <div className="rc-seg-index">Segment {seg.index}</div>
-                        {approved && <span className="rc-check">✓</span>}
-                      </div>
+  <div className="tm-progress-inline">
+    <span className="tm-progress-inline-label">Progress:</span>
+    {/* <span className="tm-progress-inline-value"> {progressItems.approved} / {progressItems.total} approved</span> */}
+    <span className="tm-progress-inline-value">{approvedCount} / {totalCount} approved</span>
+    <div className="tm-progress-inline-bar">
+      <div className="tm-progress-inline-fill" style={{ width: `${progressPct}%` }} />
+    </div>
+  </div>
+</section>
+        {/* Workspace grid */}
+        <section className="tm-workspace rc-workspace">
+         
+          <div className="tm-card tm-left">
+            <div className="tm-card-header">
+              <h3 className="tm-card-title">Content Segments</h3>
+              <span className="tm-light">{segments.length} segments to review</span>
+            </div>
 
-                      <div className="rc-seg-title" title={seg.title}>
-                        {seg.title}
-                      </div>
+            <div className="tm-seg-list">
+              {segments.map((seg) => {
+                const isSelected = seg.id === selectedId;
+                return (
+                  <button
+                    key={seg.id}
+                    className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => setSelectedId(seg.id)}
+                    aria-label={`Open Segment ${seg.index}`}
+                  >
+                    <div className="tm-seg-item-top">
+                      <span className="tm-ci-index">Segment {seg.index}</span>
+                      <span className="tm-seg-state">
+                        {/* {(compliantById[seg.id] || seg.compliant || "").trim() ? "Approved" : "Pending"} */}                    
+                          {(() => {
+                            const o = segOverrides[seg.id] || {};
+                            const st = String(o.status ?? seg.status ?? "Pending").toLowerCase();
+                            return (
+                              <span className="tm-seg-state">
+                                {st === "approved" ? "Approved" : st === "flagged" ? "Flagged" : "Pending"}
+                              </span>
+                            );
+                          })()}
 
-                      <div className="rc-seg-bottom">
-                        <span className="rc-chip low">low</span>
-                        <span className="rc-lang-chip" title="Target language">
-                          {seg.lang || getTargetLang(therapyArea)}
                         </span>
-                      </div>
-                    </button>
-                  );
-                })}
-                {segments.length === 0 && (
-                  <div className="rc-empty">No segments to display.</div>
-                )}
+                    </div>
+                    <div className="tm-seg-snippet">{seg.source}</div>
+                    <div className="tm-seg-meta-row">
+                      <span className="tm-seg-meta">{seg.words} words</span>
+                    </div>
+                  </button>
+                );
+              })}
+              {segments.length === 0 && (
+                <div className="tm-empty">No segment present to display.</div>
+              )}
+            </div>
+          </div>
+
+         
+          <div className="tm-card tm-right">
+            {/* <div className="tm-card-header">
+              <h3 className="tm-card-title">Regulatory Compliance Workspace</h3>
+              <span className="tm-light">Review culturally adapted content for compliance</span>
+            </div>
+
+            {!selected && (
+              <div className="tm-empty large">
+                Select a segment on the left to review Source, Adapted, and Compliant text.
               </div>
-            </aside>
+            )} */}
 
-            {/* RIGHT: Details */}
-            <section className="rc-right">
-              {!selectedResolved ? (
-                <div className="rc-empty large">
-                  Select a segment to view and run compliance checks.
-                </div>
-              ) : (
-                <>
-                  {/* Source Text */}
-                  <div className="rc-card">
-                    <div className="rc-card-head">
-                      <div className="rc-card-title">Source Text</div>
-                    </div>
-                    <div className="rc-box rc-muted">
-                      <pre className="rc-pre">{selectedResolved.source}</pre>
-                    </div>
-                  </div>
+            {selected && (
+              // <div className="tm-detail">
+                
+              //   <div className="tm-detail-row">
+              //     <div className="tm-detail-row-left">
+              //       <span className="tm-chip soft">Source Text</span>
+              //     </div>
+              //     <div className="tm-detail-row-right">
+              //       <span className="tm-lang-chip">{selected.lang || "EN"}</span>
+              //     </div>
+              //   </div>
+              //   <div className="tm-box source">{selected.source}</div>
 
-                  {/* Culturally Adapted Text (Phase 3) */}
-                  <div className="rc-card">
-                    <div className="rc-card-head">
-                      <div className="rc-card-title">Culturally Adapted Text (Phase 3)</div>
-                      <div className="rc-card-actions">
-                        <div className="rc-score">
-                          <span className="rc-score-label">Score</span>{" "}
-                          <span className="rc-score-value">—</span>
-                        </div>
-                        <button
-                          className="rc-btn primary"
-                          onClick={openAnalysisModal}
+               
+              //   <div className="tm-detail-head">
+              //     <span className="tm-chip">Culturally Adapted Text (Phase 3)</span>
+              //     <div className="rc-tools-inline">
+              //       <span className="rc-score-badge">
+              //         Score: {typeof scoreById[selected.id] === "number" ? `${scoreById[selected.id]}/100` : "—"}
+              //       </span>
+              //       <button className="tm-btn outline small" onClick={runComplianceCheck}>
+              //         Run Compliance Check
+              //       </button>
+              //     </div>
+              //   </div>
+              //   <div className="tm-box">{selected.adapted?.trim().length ? selected.adapted : <span className="tm-light">— No adapted text —</span>}</div>
+
+                
+              //   <div className="tm-detail-head">
+              //     <span className="tm-chip success">Regulatory Compliant Text</span>
+              //     <div className="rc-tools-inline">
+              //       <button className="tm-btn link small" onClick={flagForReview}>Flag for Review</button>
+              //       <button className="tm-btn primary small" onClick={approveCompliant}>Approve</button>
+              //     </div>
+              //   </div>
+              //   <div className="tm-box translated">
+              //     {(compliantById[selected.id] || selected.compliant || "").trim().length
+              //       ? (compliantById[selected.id] || selected.compliant)
+              //       : <span className="tm-light">— Awaiting compliance approval —</span>}
+              //   </div>
+              // </div>
+              
+
+<div className="tm-detail">
+
+{/* ===== 1) Source Text ===== */}
+<div className="rc-section">
+  <div className="rc-section-head">
+    <span className="rc-chip blue">Source Text</span>
+    {/* <span className="rc-lang-chip">{selected.lang || "EN"}</span> */}
+  </div>
+
+  <div className="rc-source-body">
+    {/* {selected.source} */}
+    {selectedResolved.source}
+  </div>
+</div>
+
+{/* ===== 2) Culturally Adapted Text (Phase 3) ===== */}
+<div className="rc-section">
+  <div className="rc-section-head">
+    <span className="rc-chip blue">Culturally Adapted Text (Phase 3)</span>
+
+    <div className="rc-tools-inline">
+      <span className="rc-score-pill">
+        Score: {typeof scoreById[selected.id] === "number" ? `${scoreById[selected.id]}/100` : "—"}
+      </span>
+      <button className="rc-btn-check"  onClick={openAnalysisModal}
                           disabled={!selectedResolved.adapted?.trim() || isAnalyzing}
                           title={
                             selectedResolved.adapted?.trim()
                               ? "Open Compliance Analysis"
                               : "No adapted text to check"
-                          }
-                        >
-                          {isAnalyzing ? "Analyzing…" : "Run Compliance Check"}
-                        </button>
-                      </div>
-                    </div>
+                          }>
+      <Shield size={15} className="h-5 w-5" />
+        {/* Run Compliance Check */}
+        {isAnalyzing ? "Analyzing…" : "Run Compliance Check"}
+      </button>
+    </div>
+  </div>
 
-                    <div className="rc-box rc-blue">
-                      <pre className="rc-pre">
-                        {selectedResolved.adapted?.trim()
+  <div className="rc-adapted-card">
+    <div className="rc-adapted-body">
+      {/* {selected.adapted?.trim().length
+        ? selected.adapted
+        : <span className="rc-muted">— No adapted text —</span>} */}
+        {selectedResolved.adapted?.trim()
                           ? selectedResolved.adapted
-                          : "— No adapted text —"}
-                      </pre>
-                    </div>
-                  </div>
+                          : <span className="rc-muted">— No adapted text —</span>}
+    </div>
+  </div>
+</div>
 
-                  {/* Regulatory Compliant Text */}
-                  <div className="rc-card">
-                    <div className="rc-card-head">
-                      <div className="rc-card-title">Regulatory Compliant Text</div>
-                      <div className="rc-card-actions">
-                        <button className="rc-btn ghost" onClick={handleFlag}>
-                          Flag for Review
-                        </button>
-                        <button className="rc-btn success" onClick={handleApprove}>
-                          Approve
-                        </button>
-                      </div>
-                    </div>
-                    <div className="rc-textarea-wrap">
-                      <textarea
+{/* ===== 3) Regulatory Compliant Text ===== */}
+<div className="rc-section">
+  <div className="rc-section-head">
+    <span className="rc-chip green">Regulatory Compliant Text</span>
+
+    <div className="rc-tools-inline">
+      <button className="rc-link-flag" onClick={handleFlag}>
+      <Flag size={12} className="h-4 w-4 mr-2" />
+        Flag for Review
+      </button>
+      <button className="rc-btn-approve" onClick={handleApprove}>
+      <CheckCircle size={12} className="h-4 w-4 mr-2" />
+        Approve
+      </button>
+    </div>
+  </div>
+
+  {/* <div className="rc-compliant-card"> */}
+    {/* <div className="rc-textarea">
+      {(compliantById[selected.id] || selected.compliant || "").trim().length
+        ? (compliantById[selected.id] || selected.compliant)
+        : <span className="rc-muted">— Awaiting compliance approval —</span>}
+    </div> */}
+    
+{/* <textarea
+    className="rc-textarea"
+    value={(compliantById[selected.id] ?? selected.compliant ?? "")}
+    onChange={(e) => {
+      const newText = e.target.value;
+      setCompliantById(prev => ({ ...prev, [selected.id]: newText }));
+    }}
+    placeholder="— Awaiting compliance approval —"
+    rows={8}
+  /> */}
+<textarea
                         className="rc-textarea"
                         placeholder="Enter or edit the final compliant text here…"
                         value={compliantEditorValue}
                         onChange={(e) => setCompliantEditorValue(e.target.value)}
                       />
-                    </div>
-                  </div>
-                </>
-              )}
-            </section>
-          </div>
-        )}
+  {/* </div> */}
+</div>
 
+</div>
+
+            )}
+          </div>
+        </section>
+        </div>
+        )}
         {mainTab === "report" && (
           <div className="rc-report">
             {/* SUMMARY CARDS */}
@@ -951,9 +1269,8 @@ export default function RegulatoryComplianceWorkspace({
           </div>
         )}
       </div>
-
-      {/* ================== ANALYSIS POPUP ================== */}
-      {isAnalysisModalOpen && selectedResolved && (
+       {/* ================== ANALYSIS POPUP ================== */}
+       {isAnalysisModalOpen && selectedResolved && (
         <div
           className="rcm-modal-backdrop"
           role="dialog"
@@ -1555,3 +1872,15 @@ function IntelInnerTabs({ locale = "DE", overallPct = 100 }) {
     </div>
   );
 }
+
+
+/* Sidebar phases */
+const SIDEBAR_PHASES = [
+  { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
+  { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "done", iconClass: "icon-translation" },
+  { id: 'P3', name: "Cultural Intelligence", sub: "Cultural adaptation", status: "done", iconClass: "icon-culture" },
+  { id: 'P4', name: "Regulatory Compliance", sub: "Compliance validation", status: "active", iconClass: "icon-compliance" },
+  { id: 'P5', name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
+  { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
+  { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
+];

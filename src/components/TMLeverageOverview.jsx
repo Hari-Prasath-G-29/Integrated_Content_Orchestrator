@@ -1,25 +1,43 @@
 import React, { useMemo } from "react";
-import "../App.css";
+// import "../App.css"; 
+// ensure you are importing the CSS where your styles are defined
 
 export default function TMLeverageOverview({ segments = [] }) {
-  // --- Analytics Logic ---
-  // In a real app, segments would have a 'matchScore' property (0-100).
-  // Here we simulate or calculate based on status/properties.
   
-  const stats = useMemo(() => {
+  // Inside TMLeverageOverview.jsx
+
+const stats = useMemo(() => {
     let exact = 0;
     let fuzzy = 0;
     let newSegs = 0;
     let totalScore = 0;
 
     segments.forEach((seg) => {
-      // Logic: Check if there's a simulated match score, otherwise default to "New"
-      // You can bind this to real data properties like seg.matchScore later.
-      const score = seg.matchScore || 0; 
+      // 1. ROBUST EXTRACTION: Check multiple places for the score
+      let rawScore = 0;
       
-      if (score === 100) exact++;
-      else if (score >= 75) fuzzy++;
-      else newSegs++;
+      if (typeof seg.matchScore === 'number') {
+          // Case A: Passed as direct prop (0-100)
+          rawScore = seg.matchScore;
+      } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
+          // Case B: Nested in reviewData (0.0 - 1.0) usually from Python/N8N
+          // We assume if it's <= 1, it's a decimal percentage
+          rawScore = seg.reviewData.tmScore <= 1 
+            ? seg.reviewData.tmScore * 100 
+            : seg.reviewData.tmScore;
+      }
+
+      // Ensure we have a clean integer
+      const score = Math.round(rawScore);
+
+      // 2. CLASSIFICATION LOGIC
+      if (score >= 95) {
+          exact++;      // Tier 1: Exact Match
+      } else if (score >= 70) {
+          fuzzy++;      // Tier 2: Fuzzy / Context Match
+      } else {
+          newSegs++;    // Tier 3: New / GenAI
+      }
 
       totalScore += score;
     });
@@ -27,15 +45,59 @@ export default function TMLeverageOverview({ segments = [] }) {
     const total = segments.length;
     const avgMatch = total > 0 ? Math.round(totalScore / total) : 0;
     
-    // Leverage Rate: (Exact + Fuzzy) / Total
+    // Leverage Rate: Percentage of segments that had ANY re-use value (Exact + Fuzzy)
     const leverageRate = total > 0 ? Math.round(((exact + fuzzy) / total) * 100) : 0;
 
     return { total, exact, fuzzy, newSegs, avgMatch, leverageRate };
   }, [segments]);
 
+
+  // --- 2. Dynamic Recommendations Engine ---
+  const recommendations = useMemo(() => {
+    const recs = [];
+
+    // Scenario A: High Leverage (Good!)
+    if (stats.leverageRate > 75) {
+      recs.push({
+        type: "positive", // blue/green
+        icon: "check",
+        text: "High TM consistency detected. Minimal manual review required."
+      });
+    }
+    // Scenario B: Low Leverage (Building phase)
+    else if (stats.leverageRate < 30) {
+      recs.push({
+        type: "info", // blue
+        icon: "info",
+        text: "Low leverage rate. This project is actively building new assets for your TM."
+      });
+    }
+
+    // Scenario C: Fuzzy Matches detected
+    if (stats.fuzzy > 0) {
+      recs.push({
+        type: "warning", // orange
+        icon: "alert",
+        text: `${stats.fuzzy} fuzzy matches detected. Review context to ensure tone consistency.`
+      });
+    }
+
+    // Default if nothing else triggered
+    if (recs.length === 0) {
+      recs.push({
+        type: "info",
+        icon: "info",
+        text: "Balanced mix of new and reused content."
+      });
+    }
+
+    return recs;
+  }, [stats]);
+
+
   return (
     <div className="tm-overview-container">
-      {/* Top Header Section inside the tab view */}
+      {/* Top Header Section */}
       <div className="tm-ov-header">
         <div className="tm-ov-header-left">
           <h2 className="tm-ov-title">TM Leverage Overview</h2>
@@ -60,20 +122,22 @@ export default function TMLeverageOverview({ segments = [] }) {
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <h3 className="tm-ov-h3">TM Leverage Overview</h3>
+            <h3 className="tm-ov-h3">Breakdown</h3>
           </div>
-          <p className="tm-ov-sub-text">Translation Memory intelligence for JP</p>
+          <p className="tm-ov-sub-text">Segment distribution by match type</p>
         </div>
 
         <div className="tm-ov-section">
           <div className="tm-ov-row-spread">
-            <span className="tm-ov-label-bold">Leverage Rate</span>
-            <span className="tm-ov-percent orange">{stats.leverageRate}%</span>
+            <span className="tm-ov-label-bold">Total Leverage</span>
+            <span className={`tm-ov-percent ${stats.leverageRate > 50 ? 'green' : 'orange'}`}>
+              {stats.leverageRate}%
+            </span>
           </div>
           <div className="tm-bar-large-bg">
             <div className="tm-bar-large-fill" style={{ width: `${stats.leverageRate}%` }} />
           </div>
-          <p className="tm-ov-caption">{stats.exact + stats.fuzzy} of {stats.total} segments have TM matches</p>
+          <p className="tm-ov-caption">{stats.exact + stats.fuzzy} of {stats.total} segments utilized TM</p>
         </div>
 
         <div className="tm-stat-grid">
@@ -116,7 +180,7 @@ export default function TMLeverageOverview({ segments = [] }) {
         </div>
       </div>
 
-      {/* Card 2: Match Percentage (Replaces Estimated Cost Savings) */}
+      {/* Card 2: Match Percentage */}
       <div className="tm-ov-card">
         <div className="tm-ov-card-header">
            <div className="tm-ov-icon-title">
@@ -125,16 +189,16 @@ export default function TMLeverageOverview({ segments = [] }) {
               <circle cx="6.5" cy="6.5" r="2.5"></circle>
               <circle cx="17.5" cy="17.5" r="2.5"></circle>
             </svg>
-            <h3 className="tm-ov-h3">Match %</h3>
+            <h3 className="tm-ov-h3">Avg Match %</h3>
           </div>
         </div>
         <div className="tm-ov-center-content">
           <div className="tm-big-money">{stats.avgMatch}%</div>
-          <div className="tm-ov-caption center">Average TM match percentage vs. new translation</div>
+          <div className="tm-ov-caption center">Average similarity across all segments</div>
         </div>
       </div>
 
-      {/* Card 3: Quality Metrics */}
+      {/* Card 3: Quality Metrics (Static for now, can be connected later) */}
       <div className="tm-ov-card">
         <div className="tm-ov-card-header">
           <div className="tm-ov-icon-title">
@@ -152,7 +216,6 @@ export default function TMLeverageOverview({ segments = [] }) {
             </div>
             <span className="tm-metric-val">{stats.avgMatch}%</span>
           </div>
-          {/* Progress bar for Avg Match */}
           <div className="tm-bar-small-bg">
             <div className="tm-bar-small-fill" style={{ width: `${stats.avgMatch}%` }} />
           </div>
@@ -164,45 +227,36 @@ export default function TMLeverageOverview({ segments = [] }) {
               </svg>
               <span className="tm-metric-label">Therapeutic Area Matches</span>
             </div>
-            <span className="tm-metric-pill">0</span>
-          </div>
-
-          <div className="tm-ov-metric-row border-top">
-             <div className="tm-metric-left">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E90FA" strokeWidth="2" style={{marginRight:8}}>
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="2" y1="12" x2="22" y2="12"/>
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-              </svg>
-              <span className="tm-metric-label">Cultural Adaptations</span>
-            </div>
-            <span className="tm-metric-pill">0</span>
+            <span className="tm-metric-pill">--</span>
           </div>
         </div>
       </div>
 
-      {/* Card 4: Recommendations */}
+      {/* Card 4: Dynamic Recommendations */}
       <div className="tm-ov-card">
         <div className="tm-ov-card-header">
            <h3 className="tm-ov-h3">Recommendations</h3>
         </div>
         <div className="tm-rec-list">
-          <div className="tm-rec-item orange">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F79009" strokeWidth="2" style={{minWidth:18}}>
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span className="tm-rec-text">Lower TM leverage - consider human review for consistency</span>
-          </div>
-          <div className="tm-rec-item blue">
-             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E90FA" strokeWidth="2" style={{minWidth:18}}>
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
-            <span className="tm-rec-text">Many new segments - good opportunity to build TM for future projects</span>
-          </div>
+          {recommendations.map((rec, idx) => (
+            <div key={idx} className={`tm-rec-item ${rec.type === 'warning' ? 'orange' : 'blue'}`}>
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{minWidth:18}}>
+                 {rec.icon === 'alert' ? (
+                   <>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                   </>
+                 ) : (
+                   <>
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4M12 8h.01" />
+                   </>
+                 )}
+               </svg>
+              <span className="tm-rec-text">{rec.text}</span>
+            </div>
+          ))}
         </div>
       </div>
 

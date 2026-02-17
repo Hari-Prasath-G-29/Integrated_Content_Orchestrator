@@ -2,7 +2,7 @@ import axios from "axios";
 
 const getveevaData = () => { 
    
-    let sessionUrl = "  http://127.0.0.1:8000/list_approved_documents";
+    let sessionUrl = "https://9kadvwq6mj.execute-api.us-east-1.amazonaws.com/list_approved_documents";
 
     // let sessionUrl = "  http://19kadvwq6mj.execute-api.us-east-1.amazonaws.com/list_approved_documents";
     // let sessionUrl = properties.GP_BASE_URL + 'Componentconfig/'+ upload_id;

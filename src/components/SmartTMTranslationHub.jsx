@@ -1,19 +1,25 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "../App.css";
+// import "../App.css";
+import "./css/Translationhub.css";
+import {  ArrowLeft,
+  Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3,
+  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react';
+import { getProject, updateProjectMeta, markPhaseComplete, setP2DraftGenerated } from '../lib/progressStore';
+import { usePhaseNavigation } from "./PhaseNav.jsx";
 
 // --- Import the new component (Ensure file is created as TMLeverageOverview.jsx) ---
 import TMLeverageOverview from "./TMLeverageOverview";
 
 /* Sidebar phases (original list retained) */
 const SIDEBAR_PHASES = [
-  { id: 1, name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
-  { id: 2, name: "Smart TM Translation", sub: "AI-powered translation", status: "active", iconClass: "icon-translation" },
-  { id: 3, name: "Cultural Intelligence", sub: "Cultural adaptation", status: "todo", iconClass: "icon-culture" },
-  { id: 4, name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
-  { id: 5, name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
-  { id: 6, name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
-  { id: 7, name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
+  { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
+  { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "active", iconClass: "icon-translation" },
+  { id: 'P3', name: "Cultural Intelligence", sub: "Cultural adaptation", status: "todo", iconClass: "icon-culture" },
+  { id: 'P4', name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
+  { id: 'P5', name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
+  { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
+  { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
 ];
 
 /* Env helpers */
@@ -59,11 +65,12 @@ const saveTranslationToDb = async (source, target, sLang, tLang, docName) => {
 };
 
 // For quick test you can uncomment and set directly:
-// const N8N_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload";
-// const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/translateAll";
+const N8N_WEBHOOK_URL = "http://172.16.4.237:8033/webhook/csv_upload";
+const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8033/webhook/csv_upload_bulk";
 
-const N8N_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload";
-const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8010/webhook/csv_upload_bulk";
+// const N8N_WEBHOOK_URL = "http://172.16.4.237:8015/webhook-test/csv_upload";
+// const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8015/webhook-test/csv_upload_bulk";
+// const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8015/webhook-test/translateAll";
 
 const N8N_AUTH =
   ENV.REACT_APP_N8N_TOKEN ||
@@ -131,6 +138,8 @@ function normalizeOutputMap(outputObj) {
       byKey[`segment-${ix}`] = val;        // "segment-1"
       byKey[`seg ${ix}`] = val;            // "seg 1"
       byKey[`Seg ${ix}`] = val;            // "Seg 1"
+      byKey[`segment${ix}`] = val;   // no-space
+      byKey[`Segment${ix}`] = val;   // no-space PascalCase
     }
   }
   return byKey;
@@ -149,96 +158,233 @@ function keyVariantsForSegment(seg) {
     `segment-${ix}`,
     `seg ${ix}`,
     `Seg ${ix}`,
+    `segment${ix}`,
+    `Segment${ix}`,
     id.toLowerCase(),
     ix.toLowerCase(),
   ];
 }
 
 /** Extract bulk translations (robust to multiple response shapes, including your screenshot) */
+// async function extractBulkTranslations(res, pending) {
+//   try {
+//     const resClone = res.clone(); 
+//     let body;
+    
+//     // 1. Try to parse the main response
+//     try {
+//         body = await res.json();
+//     } catch (e) {
+//         console.warn("⚠️ Response was not JSON, falling back to text parsing.");
+//         body = null;
+//     }
+
+//     console.log("📦 Raw N8N Response:", body);
+
+//     let byKey = {};
+
+//     // ---------------------------------------------------------
+//     // SPECIAL HANDLER: Double-Stringified JSON (The Fix)
+//     // ---------------------------------------------------------
+//     if (typeof body === 'string') {
+//         try {
+//             const parsedBody = JSON.parse(body);
+//             body = parsedBody; // Update body to be the object
+//         } catch (e) {}
+//     }
+    
+//     // Handle array where first item is stringified
+//     if (Array.isArray(body) && body.length > 0 && typeof body[0] === 'string') {
+//          try {
+//             const parsedInner = JSON.parse(body[0]);
+//             body = Array.isArray(parsedInner) ? parsedInner : [parsedInner];
+//         } catch (e) {}
+//     }
+
+//     // Standard Normalizer Helper
+//     const normalizeAndMap = (obj) => {
+//         if (!obj) return;
+//         const target = obj.output || obj; 
+        
+//         for (const [k, v] of Object.entries(target)) {
+//             if (typeof v === 'string') {
+//                 const cleanKey = k.toLowerCase().replace(/segment\s*[-_]?/i, "").trim(); 
+                
+//                 // Find matching segment in pending list
+//                 const matchingSeg = pending.find(s => 
+//                     String(s.index) === cleanKey || 
+//                     s.id === k ||
+//                     s.id === `seg-${cleanKey}`
+//                 );
+
+//                 if (matchingSeg) {
+//                     byKey[matchingSeg.id] = v.trim();
+//                 }
+//             }
+//         }
+//     };
+
+//     // PROCESS THE DATA
+//     const items = Array.isArray(body) ? body : [body];
+
+//     for (const item of items) {
+//         if (!item) continue;
+//         const actualItem = item.json ? item.json : item;
+        
+//         // Strategy A: Item has explicit ID
+//         const key = actualItem.segmentId ?? actualItem.id ?? actualItem.index;
+//         const val = actualItem.translated ?? actualItem.output ?? actualItem.result;
+
+//         if (key && val && typeof val === 'string') {
+//              const segId = String(key);
+//              const match = pending.find(p => String(p.index) === segId || p.id === segId);
+//              if (match) byKey[match.id] = val.trim();
+//         } 
+//         // Strategy B: Item IS the map
+//         else {
+//             normalizeAndMap(actualItem);
+//         }
+//     }
+
+//     // FALLBACK: Raw text lines
+//     if (Object.keys(byKey).length === 0) {
+//         const txt = await resClone.text();
+//         const lines = String(txt || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+//         pending.forEach((seg, i) => {
+//             if (lines[i]) byKey[seg.id] = lines[i];
+//         });
+//     }
+
+//     return byKey;
+
+//   } catch (err) {
+//     console.error("❌ Error parsing translations:", err);
+//     return {};
+//   }
+// }
+
+/** Extract bulk translations (Corrected for ID mismatch) */
+/** Extract bulk translations (Defensive: Handles Strings, Objects, and Double-JSON) */
+/** Extract bulk translations (Universal Unwrapper Fix) */
+/** Extract bulk translations (Specific fix for Array -> Output -> Map structure) */
+/** Extract bulk translations (Universal Unwrapper Fix) */
+/** Extract bulk translations (Universal Unwrapper Fix) */
 async function extractBulkTranslations(res, pending) {
   try {
-    const body = await res.json();
+    const resClone = res.clone();
+    let body;
 
-    // CASE A: Array with an item containing { output: { "segment 1": "...", ... } }
-    if (Array.isArray(body) && body.length > 0) {
-      const first = body[0];
-      if (first && typeof first === "object" && first.output && typeof first.output === "object") {
-        return normalizeOutputMap(first.output);
-      }
+    // 1. Initial Parse
+    try {
+      body = await res.json();
+    } catch (e) {
+      console.warn("⚠️ Response was not JSON, text fallback.");
+      body = null;
     }
 
-    // CASE B: Object with output
-    if (body && typeof body === "object" && body.output && typeof body.output === "object") {
-      return normalizeOutputMap(body.output);
-    }
+    console.log("📦 Raw N8N Response:", body);
 
-    // CASE C: Array of items with segmentId/id/index + string fields
-    const arr =
-      Array.isArray(body) ? body :
-      Array.isArray(body?.translations) ? body.translations :
-      Array.isArray(body?.data) ? body.data :
-      Array.isArray(body?.items) ? body.items : null;
-
-    const byKey = {};
-    if (arr) {
-      for (const item of arr) {
-        const key = item.segmentId ?? item.id ?? item.index;
-        if (key === undefined || key === null) continue;
-
-        let translated = "";
-        for (const k of Object.keys(item)) {
-          const v = item[k];
-          if (typeof v === "string" && /translat|output|target|result/i.test(k)) {
-            translated = v.trim();
-            break;
-          }
-        }
-        byKey[String(key)] = translated;
-
-        // If numeric key, add "segment N" alias
-        if (typeof key === "number" || /^\d+$/.test(String(key))) {
-          const ix = String(key);
-          byKey[`segment ${ix}`] = translated;
-        }
-      }
-      return byKey;
-    }
-
-    // CASE D: Object fallback
-    if (body && typeof body === "object") {
-      const byKey2 = {};
-      for (const k of Object.keys(body)) {
-        const v = body[k];
-        if (typeof v === "string") byKey2[k] = v.trim();
-        else if (v && typeof v === "object") {
-          for (const kk of Object.keys(v)) {
-            const vv = v[kk];
-            if (typeof vv === "string" && /translat|output|target|result/i.test(kk)) {
-              byKey2[k] = vv.trim();
-              break;
+    // ---------------------------------------------------------
+    // THE FIX: RECURSIVE UNWRAPPER
+    // This digs through layers of "Stringified JSON" automatically
+    // ---------------------------------------------------------
+    const recursiveUnwrap = (item) => {
+        // If it's a string that looks like JSON, parse it and dig deeper
+        if (typeof item === 'string') {
+            const trimmed = item.trim();
+            if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || 
+                (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+                try {
+                    return recursiveUnwrap(JSON.parse(item));
+                } catch {
+                    return item; // It's just a normal string
+                }
             }
-          }
+            return item;
         }
-      }
-      if (Object.keys(byKey2).length > 0) return byKey2;
+        // If it's an array, unwrap every item
+        if (Array.isArray(item)) {
+            return item.map(recursiveUnwrap);
+        }
+        // If it's an object, unwrap every value
+        if (item && typeof item === 'object') {
+            const newObj = {};
+            for (const key in item) {
+                newObj[key] = recursiveUnwrap(item[key]);
+            }
+            return newObj;
+        }
+        return item;
+    };
+
+    // Clean the entire body structure
+    const cleanBody = recursiveUnwrap(body);
+    console.log("🧹 Fully Cleaned Body:", cleanBody);
+
+    let byKey = {};
+
+    // Helper: Match "segment 2", "2", "seg-2" to internal ID
+    const findSegmentId = (keyStr) => {
+        const cleanKey = String(keyStr).toLowerCase().replace(/segment\s*[-_]?/i, "").trim();
+        const match = pending.find(s => 
+            String(s.index) === cleanKey || 
+            s.id === keyStr || 
+            s.id === `seg-${cleanKey}`
+        );
+        return match ? match.id : null;
+    };
+
+    // Searcher: Recursively find keys that match our segments
+    const deepSearch = (obj) => {
+        if (!obj || typeof obj !== 'object') return;
+
+        // Check current object keys
+        for (const [k, v] of Object.entries(obj)) {
+            // If the KEY matches a segment (e.g. "segment 2": "Hello")
+            const segId = findSegmentId(k);
+            if (segId && typeof v === 'string') {
+                byKey[segId] = v.trim();
+                console.log(`✅ Mapped "${k}" -> ${v.substring(0,20)}...`);
+            }
+        }
+
+        // Drill down deeper (e.g. into 'output', 'result', or array items)
+        if (Array.isArray(obj)) {
+            obj.forEach(deepSearch);
+        } else {
+            Object.values(obj).forEach(val => {
+                if (typeof val === 'object') deepSearch(val);
+            });
+        }
+    };
+
+    // Run the search on the cleaned body
+    deepSearch(cleanBody);
+
+    // Fallback: If deep search failed, try raw text lines
+    if (Object.keys(byKey).length === 0) {
+        console.log("⚠️ No keys found in JSON. Switching to Text Fallback.");
+        const txt = await resClone.text();
+        // Clean up brackets if the whole thing was a JSON string
+        const cleanTxt = txt.replace(/^\[|^\{|\}|\]$/g, "").replace(/\\n/g, "\n");
+        
+        const lines = cleanTxt.split(/segment\s*\d+\s*["']?:\s*/i)
+                              .filter(Boolean)
+                              .map(s => s.trim().replace(/^"|",?$/g, "")); // Clean trailing quotes/commas
+
+        pending.forEach((seg, i) => {
+            // Find a line that might match
+            if (lines[i]) byKey[seg.id] = lines[i];
+        });
     }
-  } catch {
-    // fall through to text parsing
+
+    console.log("🚀 Final Translations Map:", byKey);
+    return byKey;
+
+  } catch (err) {
+    console.error("❌ Parser Error:", err);
+    return {};
   }
-
-  // Text fallback: map lines to pending indexes
-  const txt = await res.text();
-  const lines = String(txt || "")
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const byKey = {};
-  pending.forEach((seg, i) => {
-    byKey[seg.id] = lines[i] || "";
-    byKey[`segment ${seg.index}`] = lines[i] || ""; // helpful alias
-  });
-  return byKey;
 }
 
 /** Progress modal (visual) */
@@ -317,7 +463,8 @@ function DraftPanel({
 
   const [openIds, setOpenIds] = useState(new Set());
   useEffect(() => {
-    setOpenIds(new Set(normalized.map((s) => s.id)));
+    // setOpenIds(new Set(normalized.map((s) => s.id)));
+    setOpenIds(new Set());
   }, [normalized]);
 
   const isOpen = (id) => openIds.has(id);
@@ -371,18 +518,19 @@ function DraftPanel({
       {/* Header strip */}
       <div className="dt-header-strip">
         <div className="dt-header-left">
-          <h2 className="dt-title">Complete Draft Translation</h2>
+          <h2 className="dt-title"> <FileText size={19} className="h-5 w-5 text-emerald-600 ml-2" />Complete Draft Translation</h2>
           <div className="dt-subtitle">
             {totalSegments} segments • {totalWords} words • {tmLeveragePct}% TM leverage
           </div>
-          <div className="dt-subtitle dt-muted">
+          {/* <div className="dt-subtitle dt-muted">
             {projectName} &nbsp;&middot;&nbsp; {therapyArea} &nbsp;&middot;&nbsp; {inboundLang}
-          </div>
+          </div> */}
         </div>
         <div className="dt-header-actions">
-          <button className="dt-btn outline" onClick={handleCopyToClipboard}>Copy to Clipboard</button>
-          <button className="dt-btn outline" onClick={handleDownloadAsText}>Download as Text</button>
-          <button className="dt-btn primary" onClick={() => onSendToCI(normalized)}>Send to Cultural Intelligence</button>
+          <button className="dt-btn outline py-2 px-4" onClick={handleCopyToClipboard}>Copy to Clipboard</button>
+          <button className="dt-btn outline py-2 px-4" onClick={handleDownloadAsText}>Download as Text</button>
+          <button className="dt-btn primary" onClick={() => onSendToCI(normalized)}>
+          <ArrowRight size={15} className="h-4 w-4 mr-2" />Send to Cultural Intelligence</button>
         </div>
       </div>
 
@@ -438,7 +586,9 @@ function DraftPanel({
         {/* Right metadata */}
         <aside className="dt-right">
           <div className="dt-meta-card">
-            <h4 className="dt-meta-title">Translation Metadata</h4>
+          <h4 className="dt-meta-title">
+            <BarChart3 size={19} className="h-4 w-4" />
+              Translation Metadata</h4>
 
             <div className="dt-meta-percentage-card">
               <div className="dt-meta-percentage">{tmLeveragePct}%</div>
@@ -476,10 +626,68 @@ export default function SmartTMTranslationHub({
   projectName: projectNameProp = "No project name to display",
   therapyArea = "Respiratory · DE",
   progressWords: progressWordsProp = { done: 0, total: 333 },
-  segments: segmentsProp = "No Segments to display",
+  // segments: segmentsProp = "No Segments to display",
+  segments: segmentsProp = null,
 }) {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const projectId = state?.projectId;
+
+  const projectRec = React.useMemo(() => getProject(projectId), [projectId]);
+
+// 🔁 Restore "draft generated" flag (from meta or localStorage)
+const draftGeneratedPersisted = !!(
+    projectRec?.meta?.p2DraftGenerated ||
+    localStorage.getItem(`p2_draft_generated_${projectId}`) === "true"
+  );
+  
+  // Ensure Draft tab is unlocked if the persisted flag exists
+  useEffect(() => {
+    if (draftGeneratedPersisted) {
+      setIsDraftUnlocked(true);
+      setShowGenerateDraft(false);
+    }
+}, [draftGeneratedPersisted]);
+  
+
+const persistedSegmentsP2 = React.useMemo(
+    () => (projectRec?.meta?.segmentsP2 && Array.isArray(projectRec.meta.segmentsP2))
+          ? projectRec.meta.segmentsP2
+          : [],
+    [projectRec]
+  );
+  
+   const persistedSegmentsP1 = React.useMemo(
+     () => (projectRec?.meta?.segmentsP1 && Array.isArray(projectRec.meta.segmentsP1))
+           ? projectRec.meta.segmentsP1
+           : [],
+     [projectRec]
+   );
+
+  const [isEditingTranslation, setIsEditingTranslation] = useState(false);
+  // Toggle handler
+ const [isFocusMode, setIsFocusMode] = useState(() => {
+  // restore from localStorage on mount
+  const v = localStorage.getItem('tm_focus_mode');
+  return v === 'true';
+});
+const toggleFocusMode = () => setIsFocusMode(prev => !prev);
+
+// persist on change
+useEffect(() => {
+  localStorage.setItem('tm_focus_mode', String(isFocusMode));
+}, [isFocusMode]);
+
+// keyboard: F to focus, Esc to exit
+useEffect(() => {
+  const onKey = (e) => {
+    const k = String(e.key || '').toLowerCase();
+    if (k === 'f') setIsFocusMode(true);
+    if (k === 'escape') setIsFocusMode(false);
+  };
+  window.addEventListener('keydown', onKey);
+  return () => window.removeEventListener('keydown', onKey);
+}, []);
 
   /** Tabs */
   const [activeTab, setActiveTab] = useState("workspace");
@@ -489,16 +697,65 @@ export default function SmartTMTranslationHub({
 
   /** Language passed from previous page */
   const inboundLang = state?.lang ?? "EN";
+  const gotoPhase = usePhaseNavigation(projectId, projectName);
 
   /** Normalize incoming segments */
+  // const segments = useMemo(() => {
+  //   const raw = Array.isArray(state?.segments)
+  //     ? state.segments
+  //     : Array.isArray(segmentsProp)
+  //     ? segmentsProp
+  //     : [];
+
+  //   return (raw || [])
+  //     .map((seg, i) => {
+  //       const index = typeof seg.index === "number" ? seg.index : i + 1;
+  //       const source = String(seg.source ?? "");
+  //       const translated = String(seg.translated ?? "");
+  //       const words =
+  //         typeof seg.words === "number"
+  //           ? seg.words
+  //           : source.split(/\s+/).filter(Boolean).length;
+
+  //       return {
+  //         id: seg.id ?? `seg-${index}`,
+  //         index,
+  //         source,
+  //         translated,
+  //         words,
+  //         status: seg.status ?? (translated.trim() ? "Completed" : "Pending"),
+  //         lang: seg.lang ?? inboundLang,
+  //       };
+  //     })
+  //     .filter((s) => s.source.trim().length > 0)
+  //     .sort((a, b) => a.index - b.index);
+  // }, [state?.segments, segmentsProp, inboundLang]);
+
   const segments = useMemo(() => {
-    const raw = Array.isArray(state?.segments)
-      ? state.segments
-      : Array.isArray(segmentsProp)
+    // const raw = Array.isArray(state?.segments)
+    //   ? state.segments
+    //   : Array.isArray(segmentsProp)
+    //   ? segmentsProp
+    //   : [];
+
+// ✅ Prefer location.state.segments; fallback to persisted P1 segments
+    //  const raw = Array.isArray(state?.segments)
+    //    ? state.segments
+    //    : (Array.isArray(segmentsProp) ? segmentsProp : persistedSegments);
+    
+const rawCandidate =
+    (Array.isArray(state?.segments) && state.segments.length > 0)
+      ? state.segments     
+      : (Array.isArray(persistedSegmentsP2) && persistedSegmentsP2.length > 0)
+      ? persistedSegmentsP2
+      : (Array.isArray(persistedSegmentsP1) && persistedSegmentsP1.length > 0)
+      ? persistedSegmentsP1
+      : (Array.isArray(segmentsProp) && segmentsProp.length > 0)
       ? segmentsProp
       : [];
 
-    return (raw || [])
+
+    return (rawCandidate || [])
       .map((seg, i) => {
         const index = typeof seg.index === "number" ? seg.index : i + 1;
         const source = String(seg.source ?? "");
@@ -515,12 +772,15 @@ export default function SmartTMTranslationHub({
           translated,
           words,
           status: seg.status ?? (translated.trim() ? "Completed" : "Pending"),
+          // 🆕 Default each segment's lang to inboundLang if not present
           lang: seg.lang ?? inboundLang,
         };
       })
       .filter((s) => s.source.trim().length > 0)
       .sort((a, b) => a.index - b.index);
-  }, [state?.segments, segmentsProp, inboundLang]);
+  // }, [state?.segments, segmentsProp, inboundLang]);
+// }, [state?.segments, segmentsProp, persistedSegmentsP1, inboundLang]);
+}, [state?.segments, segmentsProp, persistedSegmentsP1, persistedSegmentsP2, inboundLang]);
 
   /** Selected segment */
   const [selectedId, setSelectedId] = useState(null);
@@ -532,9 +792,32 @@ export default function SmartTMTranslationHub({
     () => segments.find((s) => s.id === selectedId) || null,
     [segments, selectedId]
   );
+  const [segOverrides, setSegOverrides] = useState({}); // { [id]: { translated?: string, status?: string } }
+
+  // ... inside SmartTMTranslationHub ...
+  
+  // 1. REHYDRATE: Restore overrides from Session Storage on mount
+  useEffect(() => {
+    try {
+      const savedKey = `tm_overrides_${projectName}`; 
+      const saved = sessionStorage.getItem(savedKey);
+      if (saved) {
+        setSegOverrides(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error("Failed to load saved translations", e);
+    }
+  }, [projectName]);
+
+  // 2. PERSIST: Save overrides to Session Storage whenever they change
+  useEffect(() => {
+    if (Object.keys(segOverrides).length > 0) {
+      const savedKey = `tm_overrides_${projectName}`;
+      sessionStorage.setItem(savedKey, JSON.stringify(segOverrides));
+    }
+  }, [segOverrides, projectName]);
 
   /** UI overlays (do NOT mutate original segments) */
-  const [segOverrides, setSegOverrides] = useState({}); // { [id]: { translated?: string, status?: string } }
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationError, setTranslationError] = useState(null);
   const [tmLeverageOn, setTmLeverageOn] = useState(true);
@@ -545,6 +828,27 @@ export default function SmartTMTranslationHub({
 
   /** Success banner → Generate Draft Translation */
   const [showGenerateDraft, setShowGenerateDraft] = useState(false);
+
+  // 🚦 Draft tab lock: disabled until user clicks "Generate Draft Translation"
+const [isDraftUnlocked, setIsDraftUnlocked] = useState(false);
+
+/** Are ALL segments completed (has real text or explicit status=Completed)? */
+const allSegmentsCompleted = useMemo(() => {
+  if (segments.length === 0) return false;
+  return segments.every((s) => {
+    const o = segOverrides[s.id];
+    const translated = (o?.translated ?? s.translated ?? "").trim();
+    const status = (o?.status ?? s.status) || (translated ? "Completed" : "Pending");
+    // treat only real (non-placeholder) translations as completed
+    return (translated.length > 0 && translated !== "— Awaiting translation —") || status === "Completed";
+  });
+}, [segments, segOverrides]);
+
+/** Show success banner only when all complete AND draft is still locked */
+useEffect(() => {
+    const canShow = allSegmentsCompleted && !isDraftUnlocked && !draftGeneratedPersisted;
+    setShowGenerateDraft(canShow);
+  }, [allSegmentsCompleted, isDraftUnlocked, draftGeneratedPersisted]);
 
   /** Draft state for same-page tab */
   const [draftSegments, setDraftSegments] = useState([]);
@@ -610,29 +914,78 @@ export default function SmartTMTranslationHub({
   };
 
   /** Merge UI overrides into base segments */
+  // const mergeSegmentsWithOverrides = (segmentsArr, overrides) => {
+  //   if (!Array.isArray(segmentsArr)) return [];
+  //   return segmentsArr.map((s) => {
+  //     const o = overrides?.[s.id] || {};
+  //     return {
+  //       ...s,
+  //       ...(o.translated !== undefined ? { translated: o.translated } : {}),
+  //       ...(o.status !== undefined ? { status: o.status } : {}),
+  //     };
+  //   });
+  // };
+
+  /** Complete Phase */
+  // const handleCompletePhase = () => {
+  //   const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+  //   navigate("/culturalAdaptationWorkspace", {
+  //     state: {
+  //       projectName,
+  //       segments: mergedSegments,
+  //       lang: inboundLang,
+  //     },
+  //   });
+  // };
+  /** Merge UI overrides into base segments */
   const mergeSegmentsWithOverrides = (segmentsArr, overrides) => {
     if (!Array.isArray(segmentsArr)) return [];
     return segmentsArr.map((s) => {
       const o = overrides?.[s.id] || {};
       return {
         ...s,
+        // 1. Keep existing text/status logic
         ...(o.translated !== undefined ? { translated: o.translated } : {}),
         ...(o.status !== undefined ? { status: o.status } : {}),
+        
+        // 2. ➤ FIX: Explicitly merge 'reviewData' so the score passes to the Analysis/Overview tabs
+        ...(o.reviewData ? { reviewData: o.reviewData } : {}),
+        
+        // 3. Or, for future-proofing, you can just spread the rest of 'o' safely:
+        // ...o 
       };
     });
   };
 
-  /** Complete Phase */
+  /** Complete Phase → go to Cultural Adaptation (preserving translated text) */
   const handleCompletePhase = () => {
-    const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+    // Merge translated/status overlays (from n8n) into base segments
+    // const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+    
+const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides).map(s => ({
+  ...s,
+ tmStatus: (s.translated?.trim() ? "Completed" : "Pending"),
+ ciStatus: "Pending", // always start P3 as pending
+}));
+
+   // ✅ Persist P2 outputs for downstream resume
+   updateProjectMeta(projectId, { segmentsP2: mergedSegments });
+
+   const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+   console.log('DB meta.segmentsP2', db[projectId]?.meta?.segmentsP2);
+   
+    markPhaseComplete(projectId, 'P2');     
     navigate("/culturalAdaptationWorkspace", {
       state: {
+        projectId,
         projectName,
-        segments: mergedSegments,
+        segments: mergedSegments, // ✅ entire segments list, with translated content included
+        // 🆕 propagate lang
         lang: inboundLang,
       },
     });
   };
+
 
   // /** Single segment translate (kept, via single endpoint if you need it) */
   // const handleAiTranslate = async () => {
@@ -681,19 +1034,213 @@ export default function SmartTMTranslationHub({
    // -----------------------------------------------------------------------
   // REPLACE YOUR EXISTING handleAiTranslate FUNCTION WITH THIS ONE
   // -----------------------------------------------------------------------
+  // const handleAiTranslate = async () => {
+  //   if (!selected) return;
+
+  //   // 1. Validation Checks
+  //   if (!N8N_WEBHOOK_URL) {
+  //     setTranslationError("N8N_WEBHOOK_URL is not configured.");
+  //     return;
+  //   }
+  //   if (segOverrides[selected.id]?.status === "Completed") {
+  //     return; // Already done
+  //   }
+
+  //   // 2. UI Feedback: "Thinking..."
+  //   setIsTranslating(true);
+  //   setTranslationError(null);
+  //   setSegOverrides((prev) => ({
+  //     ...prev,
+  //     [selected.id]: {
+  //       ...prev[selected.id],
+  //       translated: "— Analyzing TM & Glossary —",
+  //       status: "Pending",
+  //     },
+  //   }));
+
+  //   try {
+  //     const targetLang = inboundLang; // e.g., "DE" or "Chinese"
+  //     const sourceLang = "English";
+
+  //     // ---------------------------------------------------------
+  //     // STEP 1: SMART LOOKUP (The "Brain" API)
+  //     // ---------------------------------------------------------
+  //     const lookupRes = await fetch(
+  //       "https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/smart-tm-lookup",
+  //       {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({
+  //           source_text: selected.source,
+  //           target_lang: targetLang,
+  //         }),
+  //       },
+  //     );
+
+  //     if (!lookupRes.ok) throw new Error("Smart TM Lookup failed");
+  //     const decision = await lookupRes.json();
+  //     console.log("🧠 Smart TM Decision:", decision);
+
+  //     let finalTranslation = "";
+  //     let matchBadgeValue = 0;
+  //     let statusLabel = "Completed"; // Default
+
+  //     // ---------------------------------------------------------
+  //     // STEP 2: EXECUTE DECISION (3 Tiers)
+  //     // ---------------------------------------------------------
+
+  //     // --- TIER 1: HIGH MATCH (>= 95%) -> REUSE ---
+  //     if (decision.action === "reuse") {
+  //       console.log(`Exact Match Found (${decision.score * 100}%). Reuse.`);
+  //       finalTranslation = decision.translation;
+  //       matchBadgeValue = Math.round(decision.score * 100);
+  //       statusLabel = "Completed"; // Auto-approve high matches
+  //     }
+
+  //     // --- TIER 2: HYBRID / CONTEXT MATCH (70% - 94%) -> REVIEW NEEDED ---
+  //     else if (decision.action === "context") {
+  //       console.log(
+  //         `Hybrid Match (${decision.score * 100}%). Enforcing Glossary & Context.`,
+  //       );
+
+  //       // Set Status to "Review Needed" so user MUST click "View Analysis"
+  //       statusLabel = "Review Needed";
+  //       matchBadgeValue = Math.round(decision.score * 100);
+
+  //       // Call AI with Context + Glossary Hints
+  //       const payload = {
+  //         segmentId: selected.id,
+  //         projectName,
+  //         source: selected.source,
+  //         sourceLang,
+  //         targetLang,
+  //         inboundLang,
+  //         fuzzyMatch: decision.context_target, // Pass the previous translation as style guide
+  //         glossaryHints: decision.glossary || [], // Pass mandatory terms
+  //         meta: {
+  //           brand_id: state?.brand_id,
+  //           tm_score: decision.score,
+  //         },
+  //       };
+
+  //       const aiRes = await fetch(N8N_WEBHOOK_URL, {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
+  //         },
+  //         body: JSON.stringify(payload),
+  //       });
+
+  //       if (!aiRes.ok) throw new Error(`n8n Error: ${aiRes.status}`);
+  //       finalTranslation = (await extractTranslated(aiRes)).trim();
+  //     }
+
+  //     // --- TIER 3: LOW MATCH (< 70%) -> FULL AI ---
+  //     else {
+  //       console.log(`Low/No Match. Full AI Generation.`);
+  //       statusLabel = "Completed"; // Standard AI translation is auto-completed
+  //       matchBadgeValue = 0;
+
+  //       const payload = {
+  //         segmentId: selected.id,
+  //         projectName,
+  //         source: selected.source,
+  //         sourceLang,
+  //         targetLang,
+  //         inboundLang,
+  //         fuzzyMatch: "", // No context
+  //         glossaryHints: decision.glossary || [], // We still send glossary if we found any!
+  //         meta: { tm_score: 0 },
+  //       };
+
+  //       const aiRes = await fetch(N8N_WEBHOOK_URL, {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
+  //         },
+  //         body: JSON.stringify(payload),
+  //       });
+
+  //       if (!aiRes.ok) throw new Error(`n8n Error: ${aiRes.status}`);
+  //       finalTranslation = (await extractTranslated(aiRes)).trim();
+  //     }
+
+  //     // ---------------------------------------------------------
+  //     // STEP 3: FINALIZE & UPDATE UI
+  //     // ---------------------------------------------------------
+  //     if (finalTranslation && finalTranslation !== "— Awaiting translation —") {
+  //       // A. Save to DB (Only if NOT reusing an exact match)
+  //       // Note: For "Review Needed", we technically save the draft now,
+  //       // but the user will approve/overwrite it in the Analysis page later.
+  //       if (decision.action !== "reuse") {
+  //         await saveTranslationToDb(
+  //           selected.source,
+  //           finalTranslation,
+  //           sourceLang,
+  //           targetLang,
+  //           projectName,
+  //         );
+  //       }
+
+  //       // B. Prepare Data for Analysis Page
+  //       const formattedGlossary = {};
+  //       if (Array.isArray(decision.glossary)) {
+  //         decision.glossary.forEach((item) => {
+  //           formattedGlossary[item.term] = item.translation;
+  //         });
+  //       }
+
+  //       // C. Update UI
+  //       setSegOverrides((prev) => ({
+  //         ...prev,
+  //         [selected.id]: {
+  //           ...prev[selected.id],
+  //           translated: finalTranslation,
+  //           status: statusLabel,
+  //           // Important: Store data for the Analysis Page
+  //           reviewData: {
+  //             tmScore: decision.score,
+  //             glossaryUsed: formattedGlossary,
+  //             maskedSource: selected.source,
+  //           },
+  //         },
+  //       }));
+
+  //       // D. Update Badge
+  //       if (typeof setTmMatchInfo === "function") {
+  //         setTmMatchInfo((prev) => ({
+  //           ...prev,
+  //           [selected.id]: matchBadgeValue,
+  //         }));
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error("Translation logic error:", err);
+  //     setTranslationError(err.message || "Translation failed.");
+  //     setSegOverrides((prev) => ({
+  //       ...prev,
+  //       [selected.id]: {
+  //         ...prev[selected.id],
+  //         translated: "— Failed —",
+  //         status: "Pending",
+  //       },
+  //     }));
+  //   } finally {
+  //     setIsTranslating(false);
+  //   }
+  // };
+  // ✅ UPDATE 2: Smart AI Translate with Logs & TM Toggle
   const handleAiTranslate = async () => {
     if (!selected) return;
 
-    // 1. Validation Checks
     if (!N8N_WEBHOOK_URL) {
       setTranslationError("N8N_WEBHOOK_URL is not configured.");
       return;
     }
-    if (segOverrides[selected.id]?.status === "Completed") {
-      return; // Already done
-    }
+    if (segOverrides[selected.id]?.status === "Completed") return;
 
-    // 2. UI Feedback: "Thinking..."
     setIsTranslating(true);
     setTranslationError(null);
     setSegOverrides((prev) => ({
@@ -706,107 +1253,69 @@ export default function SmartTMTranslationHub({
     }));
 
     try {
-      const targetLang = inboundLang; // e.g., "DE" or "Chinese"
-      const sourceLang = "English";
+      const targetLang = inboundLang;
+      let decision;
 
-      // ---------------------------------------------------------
-      // STEP 1: SMART LOOKUP (The "Brain" API)
-      // ---------------------------------------------------------
-      const lookupRes = await fetch(
-        "https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/smart-tm-lookup",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            source_text: selected.source,
-            target_lang: targetLang,
-          }),
-        },
-      );
+      // --- STEP 1: SMART LOOKUP ---
+      if (tmLeverageOn) {
+        console.log(`🔍 [SmartTM] Looking up "${selected.source.substring(0, 20)}..."`);
+        
+        const lookupRes = await fetch(
+          "http://127.0.0.1:5000/api/smart-tm-lookup",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              source_text: selected.source,
+              target_lang: targetLang,
+            }),
+          },
+        );
+        if (!lookupRes.ok) throw new Error("Smart TM Lookup failed");
+        decision = await lookupRes.json();
+      } else {
+        console.log("⚠️ [SmartTM] TM Leverage OFF. Skipping lookup.");
+        decision = { action: "full_ai", score: 0, glossary: [], context_target: "" };
+      }
 
-      if (!lookupRes.ok) throw new Error("Smart TM Lookup failed");
-      const decision = await lookupRes.json();
-      console.log("🧠 Smart TM Decision:", decision);
+      console.log("🧠 [SmartTM] Decision:", decision);
 
       let finalTranslation = "";
-      let matchBadgeValue = 0;
-      let statusLabel = "Completed"; // Default
+      let statusLabel = "Completed";
 
-      // ---------------------------------------------------------
-      // STEP 2: EXECUTE DECISION (3 Tiers)
-      // ---------------------------------------------------------
+      // --- STEP 2: EXECUTE DECISION ---
 
-      // --- TIER 1: HIGH MATCH (>= 95%) -> REUSE ---
+      // A. REUSE (Exact Match)
       if (decision.action === "reuse") {
-        console.log(`Exact Match Found (${decision.score * 100}%). Reuse.`);
+        console.log(`✅ [SmartTM] Exact Match Found (${Math.round(decision.score * 100)}%). Reusing.`);
         finalTranslation = decision.translation;
-        matchBadgeValue = Math.round(decision.score * 100);
-        statusLabel = "Completed"; // Auto-approve high matches
+        statusLabel = "Completed";
       }
 
-      // --- TIER 2: HYBRID / CONTEXT MATCH (70% - 94%) -> REVIEW NEEDED ---
-      else if (decision.action === "context") {
-        console.log(
-          `Hybrid Match (${decision.score * 100}%). Enforcing Glossary & Context.`,
-        );
-
-        // Set Status to "Review Needed" so user MUST click "View Analysis"
-        statusLabel = "Review Needed";
-        matchBadgeValue = Math.round(decision.score * 100);
-
-        // Call AI with Context + Glossary Hints
-        const payload = {
-          segmentId: selected.id,
-          projectName,
-          source: selected.source,
-          sourceLang,
-          targetLang,
-          inboundLang,
-          fuzzyMatch: decision.context_target, // Pass the previous translation as style guide
-          glossaryHints: decision.glossary || [], // Pass mandatory terms
-          meta: {
-            brand_id: state?.brand_id,
-            tm_score: decision.score,
-          },
-        };
-
-        const aiRes = await fetch(N8N_WEBHOOK_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!aiRes.ok) throw new Error(`n8n Error: ${aiRes.status}`);
-        finalTranslation = (await extractTranslated(aiRes)).trim();
-      }
-
-      // --- TIER 3: LOW MATCH (< 70%) -> FULL AI ---
+      // B. CONTEXT / FULL AI
       else {
-        console.log(`Low/No Match. Full AI Generation.`);
-        statusLabel = "Completed"; // Standard AI translation is auto-completed
-        matchBadgeValue = 0;
+        if (decision.action === "context") {
+           console.log(`⚠️ [SmartTM] Hybrid Match (${Math.round(decision.score * 100)}%). Enforcing Glossary & Context.`);
+           statusLabel = "Review Needed";
+        } else {
+           console.log(`🤖 [SmartTM] Low/No Match. Generative AI only.`);
+        }
 
         const payload = {
           segmentId: selected.id,
           projectName,
           source: selected.source,
-          sourceLang,
+          sourceLang: "English",
           targetLang,
           inboundLang,
-          fuzzyMatch: "", // No context
-          glossaryHints: decision.glossary || [], // We still send glossary if we found any!
-          meta: { tm_score: 0 },
+          fuzzyMatch: decision.context_target || "",
+          glossaryHints: decision.glossary || [],
+          meta: { tm_score: decision.score || 0 },
         };
 
         const aiRes = await fetch(N8N_WEBHOOK_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
@@ -814,65 +1323,38 @@ export default function SmartTMTranslationHub({
         finalTranslation = (await extractTranslated(aiRes)).trim();
       }
 
-      // ---------------------------------------------------------
-      // STEP 3: FINALIZE & UPDATE UI
-      // ---------------------------------------------------------
+      // --- STEP 3: FINALIZE ---
       if (finalTranslation && finalTranslation !== "— Awaiting translation —") {
-        // A. Save to DB (Only if NOT reusing an exact match)
-        // Note: For "Review Needed", we technically save the draft now,
-        // but the user will approve/overwrite it in the Analysis page later.
+        // Save to DB (unless reusing exact match)
         if (decision.action !== "reuse") {
           await saveTranslationToDb(
             selected.source,
             finalTranslation,
-            sourceLang,
+            "English",
             targetLang,
             projectName,
           );
         }
 
-        // B. Prepare Data for Analysis Page
-        const formattedGlossary = {};
-        if (Array.isArray(decision.glossary)) {
-          decision.glossary.forEach((item) => {
-            formattedGlossary[item.term] = item.translation;
-          });
-        }
-
-        // C. Update UI
         setSegOverrides((prev) => ({
           ...prev,
           [selected.id]: {
             ...prev[selected.id],
             translated: finalTranslation,
             status: statusLabel,
-            // Important: Store data for the Analysis Page
             reviewData: {
               tmScore: decision.score,
-              glossaryUsed: formattedGlossary,
               maskedSource: selected.source,
             },
           },
         }));
-
-        // D. Update Badge
-        if (typeof setTmMatchInfo === "function") {
-          setTmMatchInfo((prev) => ({
-            ...prev,
-            [selected.id]: matchBadgeValue,
-          }));
-        }
       }
     } catch (err) {
-      console.error("Translation logic error:", err);
+      console.error("❌ Translation failed:", err);
       setTranslationError(err.message || "Translation failed.");
       setSegOverrides((prev) => ({
         ...prev,
-        [selected.id]: {
-          ...prev[selected.id],
-          translated: "— Failed —",
-          status: "Pending",
-        },
+        [selected.id]: { ...prev[selected.id], translated: "— Failed —", status: "Pending" },
       }));
     } finally {
       setIsTranslating(false);
@@ -929,158 +1411,613 @@ export default function SmartTMTranslationHub({
     }));
   };
 
-  /** Bulk: send all pending segments in ONE request — and then auto-prep Draft tab */
-  const handleTranslateAllClick = async () => {
+  /** Bulk translate all pending segments */
+//     if (!N8N_BULK_WEBHOOK_URL) {
+//       setTranslationError("N8N_BULK_WEBHOOK_URL is not configured.");
+//       return;
+//     }
+
+//     const pending = segments.filter((s) => {
+//       const o = segOverrides[s.id];
+//       const mergedTranslated = (o?.translated ?? s.translated ?? "").trim();
+//       const mergedStatus = o?.status ?? s.status;
+//       return !(mergedTranslated.length > 0 || mergedStatus === "Completed");
+//     });
+
+//     if (pending.length === 0) {
+//       // Already translated → show draft tab (hide banner on draft)
+//       // const mergedSegmentsNow = mergeSegmentsWithOverrides(segments, segOverrides);
+//       // setDraftSegments(mergedSegmentsNow);
+//       // setTmLeveragePct(0);
+//       // setDraftPrepared(true);
+//       // setActiveTab("draft");
+//       // setShowGenerateDraft(false); 
+//       setShowGenerateDraft(allSegmentsCompleted && !isDraftUnlocked);
+//       return;
+//     }
+
+//     // Show placeholders for pending segments while bulk call runs
+//     setSegOverrides((prev) => {
+//       const next = { ...prev };
+//       for (const s of pending) {
+//         next[s.id] = {
+//           ...next[s.id],
+//           translated: "— Awaiting translation —",
+//           status: "Pending",
+//         };
+//       }
+//       return next;
+//     });
+
+//     setBulkProgress({ done: 0, total: pending.length, failed: 0 });
+//     setShowGenerateDraft(false);
+//     setIsBulkTranslating(true);
+//     setTranslationError(null);
+
+//     try {
+//       const targetLang = getTargetLang(therapyArea);
+
+//       const payload = {
+//         projectName,
+//         sourceLang: "EN",
+//         targetLang,
+//         inboundLang,
+//         tmLeverageOn,
+//         therapyArea,
+//         segments: pending.map((s) => ({
+//           segmentId: s.id,
+//           index: s.index,
+//           source: s.source,
+//           words: s.words,
+//         })),
+//       };
+
+//       const res = await fetch(N8N_BULK_WEBHOOK_URL, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//           ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
+//         },
+//         body: JSON.stringify(payload),
+//       });
+
+//       if (!res.ok) {
+//         const txt = await res.text();
+//         throw new Error(`Bulk n8n responded with ${res.status}: ${txt}`);
+//       }
+
+//       // Parse translations from bulk response (handles your screenshot shape)
+//       const byKey = await extractBulkTranslations(res, pending);
+
+//       // Apply overrides from returned items
+//       let translatedCount = 0;
+//       const locallyMergedOverrides = { ...segOverrides };
+
+//       for (const s of pending) {
+//         const candidates = keyVariantsForSegment(s);
+//         const translatedRaw = candidates
+//           .map((k) => byKey[k])
+//           .find((v) => typeof v === "string" && v.trim().length > 0);
+
+//         const translated = (translatedRaw || "").trim();
+
+//         if (translated) {
+//           translatedCount += 1;
+//           locallyMergedOverrides[s.id] = {
+//             ...(locallyMergedOverrides[s.id] || {}),
+//             translated,
+//             status: "Completed",
+//           };
+//         } else {
+//           locallyMergedOverrides[s.id] = {
+//             ...(locallyMergedOverrides[s.id] || {}),
+//             status: "Pending",
+//           };
+//         }
+//       }
+
+//       setSegOverrides(locallyMergedOverrides);
+
+//       setBulkProgress({
+//         done: translatedCount,
+//         total: pending.length,
+//         failed: Math.max(pending.length - translatedCount, 0),
+//       });
+
+//       // Prepare and switch to 'draft' tab with merged segments (hide banner)
+//       // const mergedSegmentsFinal = mergeSegmentsWithOverrides(segments, locallyMergedOverrides);
+//       // setDraftSegments(mergedSegmentsFinal);
+//       // setTmLeveragePct(0);
+//       // setDraftPrepared(true);
+//       // setActiveTab("draft");
+//       // setShowGenerateDraft(false); 
+      
+// // Do NOT auto-switch to Draft; just show the "Generate Draft Translation" banner
+// setShowGenerateDraft(true);
+
+//     } catch (err) {
+//       setTranslationError(err.message || "Bulk translation failed.");
+//       setBulkProgress((bp) => ({ ...bp, failed: bp.total - bp.done }));
+//     } finally {
+//       setIsBulkTranslating(false);
+//     }
+//   };
+// ✅ UPDATE 3: Smart Bulk Translation with Logs
+  // const handleTranslateAllClick = async () => {
+  //   if (!N8N_BULK_WEBHOOK_URL) {
+  //     setTranslationError("N8N_BULK_WEBHOOK_URL is not configured.");
+  //     return;
+  //   }
+
+  //   const pendingSegments = segments.filter((s) => {
+  //     const o = segOverrides[s.id];
+  //     const status = o?.status ?? s.status;
+  //     return status !== "Completed";
+  //   });
+
+  //   if (pendingSegments.length === 0) {
+  //     console.log("🎉 All segments completed. Showing Draft.");
+  //     setShowGenerateDraft(true);
+  //     return;
+  //   }
+
+  //   console.log(`🚀 [Bulk] Starting bulk translation for ${pendingSegments.length} segments.`);
+  //   setIsBulkTranslating(true);
+  //   setTranslationError(null);
+  //   setBulkProgress({ done: 0, total: pendingSegments.length, failed: 0 });
+
+  //   try {
+  //     // 1. SMART LOOKUP
+  //     const lookupRes = await fetch("http://127.0.0.1:5000/api/smart-tm-lookup-bulk", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         source_texts: pendingSegments.map(s => s.source),
+  //         target_lang: inboundLang
+  //       })
+  //     });
+
+  //     const decisions = await lookupRes.json();
+  //     console.log(`🧠 [Bulk] Decisions received:`, decisions);
+
+  //     const segmentsToGenerate = [];
+  //     const newOverrides = { ...segOverrides };
+  //     let completedCount = 0;
+
+  //     // 2. SORT DECISIONS
+  //     pendingSegments.forEach((seg, index) => {
+  //       const decision = decisions[index];
+
+  //       if (decision.action === "reuse") {
+  //         // Exact Match
+  //         newOverrides[seg.id] = {
+  //           translated: decision.translation,
+  //           status: "Completed",
+  //           reviewData: { tmScore: decision.score }
+  //         };
+  //         completedCount++;
+  //       } else {
+  //         // Needs AI
+  //         segmentsToGenerate.push({
+  //           segmentId: seg.id,
+  //           index: seg.index,
+  //           source: seg.source,
+  //           fuzzyContext: decision.context_target,
+  //           glossary: decision.glossary
+  //         });
+  //       }
+  //     });
+
+  //     console.log(`📊 [Bulk] Reused: ${completedCount}, Sending to AI: ${segmentsToGenerate.length}`);
+      
+  //     // Update UI with exact matches immediately
+  //     setSegOverrides(newOverrides);
+  //     setBulkProgress({ done: completedCount, total: pendingSegments.length, failed: 0 });
+
+  //     // 3. BATCH AI CALL
+  //     if (segmentsToGenerate.length > 0) {
+  //       const n8nPayload = {
+  //         projectName,
+  //         sourceLang: "English",
+  //         targetLang: inboundLang,
+  //         therapyArea,
+  //         segments: segmentsToGenerate.map(s => ({
+  //            segmentId: s.segmentId,
+  //            index: s.index,
+  //            source: s.fuzzyContext
+  //              ? `[Context: Similar translation "${s.fuzzyContext}"] ${s.source}`
+  //              : s.source
+  //         })),
+  //       };
+
+  //       const n8nRes = await fetch(N8N_BULK_WEBHOOK_URL, {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify(n8nPayload),
+  //       });
+
+  //       if (!n8nRes.ok) throw new Error("AI Generation failed");
+
+  //       const aiResults = await extractBulkTranslations(n8nRes, segmentsToGenerate);
+        
+  //       // Merge AI results
+  //       Object.entries(aiResults).forEach(([key, val]) => {
+  //          const seg = segmentsToGenerate.find(s => s.segmentId === key || String(s.index) === String(key));
+  //          if (seg && val) {
+  //            newOverrides[seg.segmentId] = {
+  //              translated: val,
+  //              status: "Completed",
+  //              reviewData: { tmScore: 0 }
+  //            };
+  //            completedCount++;
+  //          }
+  //       });
+  //     }
+
+  //     setSegOverrides(newOverrides);
+  //     setBulkProgress({ done: pendingSegments.length, total: pendingSegments.length, failed: 0 });
+  //     setShowGenerateDraft(true);
+  //     console.log("✅ [Bulk] Batch processing finished.");
+
+  //   } catch (err) {
+  //     console.error("❌ Bulk failed:", err);
+  //     setTranslationError("Bulk processing failed: " + err.message);
+  //   } finally {
+  //     setIsBulkTranslating(false);
+  //   }
+  // };
+  // ... existing imports
+
+  // ... existing imports
+
+// ---------------------------------------------------------------------
+// 1. ADD THIS HELPER FUNCTION (Put this above your component or inside it)
+// ---------------------------------------------------------------------
+const safeMapN8NToSegments = (n8nData, targetSegments) => {
+  const resultMap = {};
+  
+  // A. Extract all translation strings into a flat array
+  let cleanValues = [];
+
+  // Recursive extraction to handle any JSON structure (Nested objects, arrays, etc.)
+  const extractStrings = (obj) => {
+    if (!obj) return;
+    if (typeof obj === 'string' && obj.length > 0) {
+      // filtering out keys/labels, keeping values that look like translations
+      // Heuristic: If it's the exact key "output" or "segment", ignore.
+      if (obj !== "output" && !obj.startsWith("segment")) { 
+          cleanValues.push(obj); 
+      }
+      return;
+    }
+    if (Array.isArray(obj)) {
+      obj.forEach(extractStrings);
+    } else if (typeof obj === 'object') {
+      // Try to follow numeric order if keys are "segment 1", "segment 2"
+      const keys = Object.keys(obj).sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/)?.[0] || "9999");
+        const numB = parseInt(b.match(/\d+/)?.[0] || "9999");
+        return numA - numB;
+      });
+      keys.forEach(k => extractStrings(obj[k]));
+    }
+  };
+
+  // If the output is the specific format from your screenshot: { output: { "segment 1": "..." } }
+  if (n8nData?.output && typeof n8nData.output === 'object') {
+     extractStrings(n8nData.output);
+  } else if (Array.isArray(n8nData) && n8nData[0]?.output) {
+     extractStrings(n8nData[0].output);
+  } else {
+     // Fallback: search everywhere
+     extractStrings(n8nData);
+  }
+
+  // B. Map 1-to-1 based on order (The "Hybrid" Fix)
+  // If we sent 3 segments and got 3 strings, we assume they match in order.
+  if (cleanValues.length > 0) {
+      targetSegments.forEach((seg, index) => {
+          // Use the index to grab the corresponding translation
+          // This fixes the issue where N8N returns "segment 1" for the actual "Segment 5"
+          if (cleanValues[index]) {
+              resultMap[seg.segmentId] = cleanValues[index];
+          }
+      });
+  }
+
+  return resultMap;
+};
+
+
+// ---------------------------------------------------------------------
+// 2. REPLACE YOUR handleTranslateAllClick FUNCTION
+// ---------------------------------------------------------------------
+const handleTranslateAllClick = async () => {
+    // 1. Validation
     if (!N8N_BULK_WEBHOOK_URL) {
       setTranslationError("N8N_BULK_WEBHOOK_URL is not configured.");
       return;
     }
 
-    const pending = segments.filter((s) => {
+    // Filter segments that actually need work (Hybrid Flow Step 1)
+    const pendingSegments = segments.filter((s) => {
       const o = segOverrides[s.id];
-      const mergedTranslated = (o?.translated ?? s.translated ?? "").trim();
-      const mergedStatus = o?.status ?? s.status;
-      return !(mergedTranslated.length > 0 || mergedStatus === "Completed");
+      const status = o?.status ?? s.status;
+      return status !== "Completed";
     });
 
-    if (pending.length === 0) {
-      // Already translated → show draft tab (hide banner on draft)
-      const mergedSegmentsNow = mergeSegmentsWithOverrides(segments, segOverrides);
-      setDraftSegments(mergedSegmentsNow);
-      setTmLeveragePct(0);
-      setDraftPrepared(true);
-      setActiveTab("draft");
-      setShowGenerateDraft(false); // HIDE banner when switching to draft
+    if (pendingSegments.length === 0) {
+      // Nothing to do? Go straight to Draft Page
+      handleGenerateDraftTranslation();
       return;
     }
 
-    // Show placeholders for pending segments while bulk call runs
-    setSegOverrides((prev) => {
-      const next = { ...prev };
-      for (const s of pending) {
-        next[s.id] = {
-          ...next[s.id],
-          translated: "— Awaiting translation —",
-          status: "Pending",
-        };
-      }
-      return next;
-    });
-
-    setBulkProgress({ done: 0, total: pending.length, failed: 0 });
-    setShowGenerateDraft(false);
+    // UI Setup
     setIsBulkTranslating(true);
     setTranslationError(null);
+    setBulkProgress({ done: 0, total: pendingSegments.length, failed: 0 });
 
     try {
-      const targetLang = getTargetLang(therapyArea);
-
-      const payload = {
-        projectName,
-        sourceLang: "EN",
-        targetLang,
-        inboundLang,
-        tmLeverageOn,
-        therapyArea,
-        segments: pending.map((s) => ({
-          segmentId: s.id,
-          index: s.index,
-          source: s.source,
-          words: s.words,
-        })),
-      };
-
-      const res = await fetch(N8N_BULK_WEBHOOK_URL, {
+      // ---------------------------------------------------------
+      // STEP 1: BULK SMART LOOKUP (Check Python Brain)
+      // ---------------------------------------------------------
+      console.log("🧠 Checking TM for all segments...");
+      
+      // NOTE: Ensure your Python backend URL is correct
+      const lookupRes = await fetch("http://127.0.0.1:5000/api/smart-tm-lookup-bulk", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_texts: pendingSegments.map(s => s.source),
+          target_lang: inboundLang
+        })
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Bulk n8n responded with ${res.status}: ${txt}`);
-      }
+      const decisions = await lookupRes.json(); // Array of { action, score, translation... }
 
-      // Parse translations from bulk response (handles your screenshot shape)
-      const byKey = await extractBulkTranslations(res, pending);
+      // ---------------------------------------------------------
+      // STEP 2: SORT & APPLY EXACT MATCHES
+      // ---------------------------------------------------------
+      const segmentsToGenerate = [];
+      const newOverrides = { ...segOverrides };
+      let completedCount = 0;
 
-      // Apply overrides from returned items
-      let translatedCount = 0;
-      const locallyMergedOverrides = { ...segOverrides };
+      const segmentScores={};
+      let completedcount=0;
 
-      for (const s of pending) {
-        const candidates = keyVariantsForSegment(s);
-        const translatedRaw = candidates
-          .map((k) => byKey[k])
-          .find((v) => typeof v === "string" && v.trim().length > 0);
+      pendingSegments.forEach((seg, index) => {
+        const decision = decisions[index];
 
-        const translated = (translatedRaw || "").trim();
+        segmentScores[seg.id] = decision.score || 0;
 
-        if (translated) {
-          translatedCount += 1;
-          locallyMergedOverrides[s.id] = {
-            ...(locallyMergedOverrides[s.id] || {}),
-            translated,
+        if (decision.action === "reuse") {
+          // TIER 1: Exact Match from DB -> Apply immediately!
+          console.log(`♻️ Reusing exact match for Seg ${seg.index}`);
+          newOverrides[seg.id] = {
+            translated: decision.translation,
             status: "Completed",
+            reviewData: { tmScore: decision.score }
           };
+          completedCount++;
         } else {
-          locallyMergedOverrides[s.id] = {
-            ...(locallyMergedOverrides[s.id] || {}),
-            status: "Pending",
-          };
+          // TIER 2 & 3: Needs AI Generation via N8N
+          segmentsToGenerate.push({
+            segmentId: seg.id,
+            index: seg.index,
+            source: seg.source,
+            fuzzyContext: decision.context_target, 
+            glossary: decision.glossary
+          });
         }
+      });
+      
+      // Update UI with exact matches immediately
+      setSegOverrides(newOverrides);
+      setBulkProgress({ done: completedCount, total: pendingSegments.length, failed: 0 });
+
+      // ---------------------------------------------------------
+      // STEP 3: BATCH CALL TO N8N (Only for the remaining ones)
+      // ---------------------------------------------------------
+      if (segmentsToGenerate.length > 0) {
+        console.log(`🤖 Sending ${segmentsToGenerate.length} segments to AI...`);
+        
+        const payload = {
+          projectName,
+          sourceLang: "English",
+          targetLang: inboundLang,
+          therapyArea,
+          // We map the segments to include context hints right in the prompt
+          segments: segmentsToGenerate.map(s => ({
+             segmentId: s.segmentId,
+             index: s.index,
+             source: s.fuzzyContext 
+               ? `[Context: Similar previous translation was "${s.fuzzyContext}"] ${s.source}` 
+               : s.source
+          })),
+          glossaryHints: segmentsToGenerate.flatMap(s => s.glossary)
+        };
+
+        const n8nRes = await fetch(N8N_BULK_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!n8nRes.ok) throw new Error("AI Generation failed");
+
+        // Parse JSON safely
+        let n8nJson;
+        try {
+            n8nJson = await n8nRes.json();
+        } catch (e) {
+            console.error("N8N response was not JSON", e);
+            throw new Error("Invalid response from Translation Engine");
+        }
+
+        // ➤ KEY FIX: Use the new positional mapper
+        const mappedResults = safeMapN8NToSegments(n8nJson, segmentsToGenerate);
+        
+        // Merge AI results into overrides
+        Object.entries(mappedResults).forEach(([segId, translatedText]) => {
+             newOverrides[segId] = {
+               translated: translatedText,
+               status: "Completed",
+               reviewData: { tmScore: 0 } // Generated fresh
+             };
+             completedCount++;
+        });
       }
 
-      setSegOverrides(locallyMergedOverrides);
+      // ---------------------------------------------------------
+      // STEP 4: FINAL UI UPDATE & SAVE
+      // ---------------------------------------------------------
+      setSegOverrides(newOverrides);
+      setBulkProgress({ done: pendingSegments.length, total: pendingSegments.length, failed: 0 });
 
-      setBulkProgress({
-        done: translatedCount,
-        total: pending.length,
-        failed: Math.max(pending.length - translatedCount, 0),
-      });
+      console.log("💾 Saving all new translations to DB...");
+      
+      // Save newly generated AI translations to DB
+      const itemsToSave = segmentsToGenerate.map(s => {
+        const finalTrans = newOverrides[s.segmentId]?.translated;
+        if (finalTrans) {
+            return {
+                document_name: projectName,
+                source_text: s.source,
+                target_text: finalTrans,
+                source_language: "English",
+                target_language: inboundLang
+            };
+        }
+        return null;
+      }).filter(Boolean);
 
-      // Prepare and switch to 'draft' tab with merged segments (hide banner)
-      const mergedSegmentsFinal = mergeSegmentsWithOverrides(segments, locallyMergedOverrides);
-      setDraftSegments(mergedSegmentsFinal);
-      setTmLeveragePct(0);
-      setDraftPrepared(true);
-      setActiveTab("draft");
-      setShowGenerateDraft(false); // HIDE banner when switching to draft
+      if (itemsToSave.length > 0) {
+        // Non-blocking DB save
+        fetch("http://127.0.0.1:5000/api/translated-content/bulk", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ items: itemsToSave })
+        }).catch(err => console.warn("Background DB save failed", err));
+      }
+      
+      // STEP 5: NAVIGATE TO DRAFT PAGE
+      // We pass 'newOverrides' explicitly to ensure the Draft page gets the latest data
+      setTimeout(() => {
+          setIsBulkTranslating(false);
+          handleGenerateDraftTranslation(newOverrides); 
+      }, 1000);
+
     } catch (err) {
-      setTranslationError(err.message || "Bulk translation failed.");
-      setBulkProgress((bp) => ({ ...bp, failed: bp.total - bp.done }));
-    } finally {
+      console.error(err);
+      setTranslationError("Bulk processing failed: " + err.message);
       setIsBulkTranslating(false);
     }
-  };
-
+};
   /** Generate Draft Translation → switch to Draft tab on the same page (hide banner) */
-  const handleGenerateDraftTranslation = () => {
-    const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+  // const handleGenerateDraftTranslation = () => {
+  //   const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+  //   setDraftSegments(mergedSegments);
+  //   setTmLeveragePct(0);
+  //   setDraftPrepared(true);
+  //   setActiveTab("draft");
+  //   setShowGenerateDraft(false); 
+  // };
+/** Generate Draft Translation → switch to Draft tab and unlock it */
+  // UPDATED: Accepts 'latestOverrides' to fix the "Translate All" empty draft bug
+  const handleGenerateDraftTranslation = (latestOverrides) => {
+    
+    // 1. CRITICAL FIX: Use fresh data if passed (from Translate All), otherwise use current state
+    // This prevents the "Empty Draft" bug by bypassing slow React state updates
+    const overridesToUse = latestOverrides || segOverrides;
+
+    // 2. Merge segments using the correct overrides
+    const mergedSegments = mergeSegmentsWithOverrides(segments, overridesToUse);
+    setDraftSegments(mergedSegments); // Update draft segments immediately with the merged data
+    
+    // 3. Update Local State
     setDraftSegments(mergedSegments);
-    setTmLeveragePct(0);
+    setTmLeveragePct(0); // (Optional: You can calculate real % here if needed)
     setDraftPrepared(true);
-    setActiveTab("draft");
-    setShowGenerateDraft(false); // HIDE banner on draft
+    setIsDraftUnlocked(true);       // 🔓 Unlock Draft tab
+    setActiveTab("draft");          // Go to Draft tab
+    setShowGenerateDraft(false);    // Hide the success banner
+    
+    // 4. Persist to DB/Storage so it survives refresh
+    // We save the 'mergedSegments' which contains the final translations
+    setP2DraftGenerated(projectId, true, { segmentsP2: mergedSegments });
+    
+    // Optional localStorage fallback (project-scoped key)
+    localStorage.setItem(`p2_draft_generated_${projectId}`, "true");
   };
+  /** Generate Draft Translation → switch to Draft tab and unlock it */
+// const handleGenerateDraftTranslation = () => {
+//   const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
+//   setDraftSegments(mergedSegments);
+//   setTmLeveragePct(0);
+//   setDraftPrepared(true);
+//   setIsDraftUnlocked(true);       // 🔓 unlock Draft tab
+//   setActiveTab("draft");          // go to Draft tab
+//   setShowGenerateDraft(false);    // hide the success banner
+   
+//   // ✅ Persist "draft generated" so it survives navigation/refresh
+//   // try {
+//   //   updateProjectMeta(projectId, {
+//   //     segmentsP2: mergedSegments,           
+//   //     p2DraftGeneratedAt: new Date().toISOString(),
+//   //     p2DraftGenerated: true,
+//   //   });
+//   // } catch (e) {
+//   //   console.warn("Failed to persist draft generated flag", e);
+//   // }
+//    setP2DraftGenerated(projectId, true, { segmentsP2: mergedSegments });
+//   // Optional localStorage fallback (project-scoped key)
+//   localStorage.setItem(`p2_draft_generated_${projectId}`, "true");
+// };
 
   /** Send to CI (from Draft panel) */
+  // const handleSendToCI = (normalizedDraftSegments) => {
+  //   navigate("/culturalAdaptationWorkspace", {
+  //     state: {
+  //       projectName,
+  //       segments: normalizedDraftSegments,
+  //       lang: inboundLang,
+  //       therapyArea,
+  //     },
+  //   });
+  // };
+  /** Send to CI (from Draft panel) */
   const handleSendToCI = (normalizedDraftSegments) => {
-    navigate("/culturalAdaptationWorkspace", {
-      state: {
-        projectName,
-        segments: normalizedDraftSegments,
-        lang: inboundLang,
-        therapyArea,
-      },
-    });
-  };
+    
+    // Persist P2 + "draft generated" flag before leaving
+    // try {
+    //   updateProjectMeta(projectId, {
+    //     segmentsP2: normalizedDraftSegments,
+    //     p2DraftGenerated: true,
+    //     p2DraftGeneratedAt: new Date().toISOString(),
+    //   });
+    // } catch (e) {
+    //   console.warn('Failed to persist segmentsP2 before sending to CI', e);
+    // }
+    setP2DraftGenerated(projectId, true, { segmentsP2: normalizedDraftSegments });
+    localStorage.setItem(`p2_draft_generated_${projectId}`, "true");
+    markPhaseComplete(projectId, 'P2');    
+      navigate("/culturalAdaptationWorkspace", {
+        state: {
+          projectId,
+          projectName,
+          segments: normalizedDraftSegments,
+          lang: inboundLang,
+          therapyArea,
+          fromDraft: true, // optional: for any additional UX control on CI
+        },
+      });
+    };
 
   return (
-    <div className="tm-app">
+    <div className={`tm-app ${isFocusMode ? 'is-focus' : ''}`} data-page="tm">
       {/* Sidebar */}
       <aside className="tm-sidebar">
         <div className="tm-sidebar-progress">
@@ -1100,7 +2037,8 @@ export default function SmartTMTranslationHub({
               key={p.id}
               className={`tm-phase-item ${p.status} ${p.status === "active" ? "is-active" : ""}`}
               aria-label={`Open ${p.name}`}
-              onClick={() => handlePhaseClick(p.name)}
+              // onClick={() => handlePhaseClick(p.name)}
+              onClick={() => gotoPhase(p.id)}
             >
               <span className={`tm-phase-icon ${p.iconClass}`} />
               <span className="tm-phase-text">
@@ -1114,67 +2052,92 @@ export default function SmartTMTranslationHub({
         </nav>
       </aside>
 
-      {/* Main */}
+  {/* Main */}
       <div className="tm-main">
         {/* Header */}
-        <header className="tm-header">
-          <div className="tm-header-left">
-            <div className="tm-crumbs">
-              <button className="tm-crumb">Main Hub</button>
-              <svg className="tm-crumb-sep" viewBox="0 0 24 24" aria-hidden>
-                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" fill="none" />
-              </svg>
-              <button className="tm-crumb">Glocalization Hub</button>
-            </div>
+        <header className="tm-header py-3 px-4">
+      <div className="tm-crumbs">
+          <button className="tm-crumb" onClick={() => navigate('/')}>
+          <ArrowLeft size={14} className="h-1 w-1 mr-2" /> Main Hub
+          </button>
+          <span className="tm-divider"></span>
+          <button className="tm-crumb" onClick={() => navigate('/glocalizationHub')}>
+            Glocalization Hub
+          </button>
+        </div>
+      {/* Center: Title */}
+        <div className="tm-title-section">
+          <h1 className="tm-page-title">{projectName}</h1>
+          {/* <span className="tm-title-sub">{therapyArea}</span> */}
+        </div>
+            
+      {/* Right: Saved + Buttons */}
+        <div className="tm-header-right">
+          <span className="tm-saved"> <CheckCircle2 size={12} className="h-1 w-1 text-green-600" />
+          Saved</span>
+          <button className="tm-btn-outline">
+          <Save size={15} className="h-4 w-4 mr-2" /> Save
+          </button>
+          
+<button
+              className="tm-btn-outline"
+              onClick={toggleFocusMode}
+              aria-pressed={isFocusMode}
+              title={isFocusMode ? 'Exit focus (Esc)' : 'Enter focus (F)'}
+            >
+              {isFocusMode ? (
+                <>
+                  <Minimize2 size={16} /> Exit
+                </>
+              ) : (
+                <>
+                  <Maximize2 size={16} /> Focus
+                </>
+              )}
+            </button>
 
-            <div className="tm-title-row">
-              <h1 className="tm-page-title">{projectName}</h1>
-              <span className="tm-title-sub">{therapyArea}</span>
-            </div>
-          </div>
-
-          <div className="tm-header-right">
-            <span className="tm-saved">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M5 13l4 4L19 7"
-                  stroke="#1F7AEC"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Saved
-            </span>
-            <button className="tm-btn ghost">Save</button>
-            <button className="tm-btn ghost">Focus</button>
-          </div>
-        </header>
+        </div>
+      </header>
 
         {/* Top tabs bar */}
         <section className="tm-tabs-bar">
-          <div className="tm-tabs">
-            <button
-              className={`tm-tab ${activeTab === "workspace" ? "is-active" : ""}`}
-              onClick={() => setActiveTab("workspace")}
-            >
-              Translation Workspace
-            </button>
-            <button
-              className={`tm-tab ${activeTab === "draft" ? "is-active" : ""}`}
-              onClick={() => setActiveTab("draft")}
-            >
-              Draft Translation
-            </button>
-            <button
-              className={`tm-tab ${activeTab === "tm" ? "is-active" : ""}`}
-              onClick={() => setActiveTab("tm")}
-            >
-              TM Leverage Overview
-            </button>
-          </div>
+  <div className="tm-tabs">
+    <button
+      className={`tm-tab ${activeTab === 'workspace' ? 'is-active' : ''}`}
+      onClick={() => setActiveTab('workspace')}
+    >
+      <FileText className="tm-tab-icon" />
+      Translation Workspace
+    </button>
 
-          <div className="tm-tabs-right">
+    {/* <button
+      className={`tm-tab ${activeTab === 'draft' ? 'is-active' : ''}`}
+      onClick={() => setActiveTab('draft')}
+    >
+      <CheckCircle className="tm-tab-icon" />
+      Draft Translation
+    </button> */}
+
+    <button
+  className={`tm-tab ${activeTab === 'draft' ? 'is-active' : ''} ${!isDraftUnlocked ? 'is-disabled' : ''}`}
+  onClick={() => isDraftUnlocked && setActiveTab('draft')}
+  disabled={!isDraftUnlocked}
+  title={isDraftUnlocked ? 'Open Draft Translation' : 'Generate Draft Translation to open'}
+>
+  <CheckCircle className="tm-tab-icon" />
+  Draft Translation
+</button>
+
+    <button
+      className={`tm-tab ${activeTab === 'tm' ? 'is-active' : ''}`}
+      onClick={() => setActiveTab('tm')}
+    >
+      <TrendingUp className="tm-tab-icon" />
+      TM Leverage Overview
+    </button>
+  </div>
+
+          {/* <div className="tm-tabs-right">
             <div className="tm-progress-inline">
               <span className="tm-progress-inline-label">Progress:</span>
               <span className="tm-progress-inline-value">
@@ -1198,7 +2161,7 @@ export default function SmartTMTranslationHub({
                 Complete Phase
               </button>
             </div>
-          </div>
+          </div> */}
         </section>
 
         {/* Success banner (HIDDEN when on Draft tab) */}
@@ -1228,198 +2191,438 @@ export default function SmartTMTranslationHub({
 
         {/* Workspace tab */}
         {activeTab === "workspace" && (
-          <section className="tm-workspace">
-            {/* Left card: Segments list */}
-            <div className="tm-card tm-left">
-              <div className="tm-card-header">
-                <h3 className="tm-card-title">Segments</h3>
-                <span className="tm-light">{segments.length} items</span>
-              </div>
-
-              <div className="tm-seg-list">
-                {segments.map((seg) => {
-                  const isSelected = seg.id === selectedId;
-                  const o = segOverrides[seg.id];
-                  const mergedStatus = o?.status ?? seg.status;
-                  const statusClass =
-                    mergedStatus === "Pending"
-                      ? "pending"
-                      : mergedStatus === "Completed"
-                      ? "completed"
-                      : "neutral";
-
-                return (
-                  <button
-                    key={seg.id}
-                    className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
-                    onClick={() => setSelectedId(seg.id)}
-                    aria-label={`Open Segment ${seg.index}`}
-                  >
-                    <div className="tm-seg-item-top">
-                      <span className={`tm-seg-pill ${statusClass}`}>Segment {seg.index}</span>
-                      <span className="tm-seg-state">{mergedStatus}</span>
-                    </div>
-                    <div className="tm-seg-snippet">{seg.source}</div>
-                    <div className="tm-seg-meta-row">
-                      <span className="tm-seg-meta">{seg.words} words</span>
-                    </div>
-                  </button>
-                );
-                })}
-                {segments.length === 0 && (
-                  <div className="tm-empty">No segment present to display.</div>
-                )}
-              </div>
+              <div>
+              <section className="tm-page-heading">
+    <div>
+      <h2 className="tm-section-title">Smart TM Translation Hub</h2>
+      <p className="tm-section-sub">AI-powered translation with Translation Memory leverage</p>
+    </div>
+  
+    <div className="tm-heading-right">
+      {/* Reuse the same inline progress and actions, or keep empty if you prefer only the tabs bar showing them. */}
+      <div className="tm-progress-inline">
+        <span className="tm-progress-inline-label">Progress:</span>
+        <span className="tm-progress-inline-value">
+          {progressWords.done} / {progressWords.total} words
+        </span>
+        <div className="tm-progress-inline-bar">
+          <div
+            className="tm-progress-inline-fill"
+            style={{ width: `${Math.min(progressPct, 100)}%` }}
+          />
+        </div>
+      </div>
+  
+      <div className="tm-actions">
+        {/* <button className="tm-btn-outline"> <Languages size={14} className="h-4 w-4 mr-2" /> Translate All</button> */}
+        <button
+                  className={`tm-btn outline ${isBulkTranslating ? "is-loading" : ""}`}
+                  onClick={handleTranslateAllClick}
+                  disabled={isBulkTranslating}
+                >
+                  <Languages size={14} className="h-4 w-4 mr-2" />
+                  {isBulkTranslating ? "Translating all…" : "Translate All"}
+                </button>
+        <button className="tm-btn-primary" onClick={handleCompletePhase}><CheckCircle2 size={14} className="h-4 w-4 mr-2" />Complete Phase</button>
+      </div>
+    </div>
+  </section>
+  <section className="tm-workspace">
+          {/* Left card: Segments list (unchanged) */}
+          <div className="tm-card tm-left">
+            <div className="tm-card-header">
+              <h3 className="tm-card-title">Segments</h3>
+              <span className="tm-light">{segments.length} items</span>
             </div>
 
-            {/* Right column: Action + Detail cards */}
-            <div className="tm-right-column">
-              {/* ACTION CARD */}
-              <div className="tm-card tm-action-card">
-                <div className="tm-card-header">
-                  <div className="tm-action-title">
-                    <h3 className="tm-card-title">TM Leverage</h3>
-                    <div className="tm-card-subset">
-                      <span className="tm-light">
-                        AI will use Translation Memory for consistency and cost savings
-                      </span>
-                    </div>
-                  </div>
-                  <label className="tm-switch" aria-label="Toggle TM Leverage">
-                    <input
-                      type="checkbox"
-                      checked={tmLeverageOn}
-                      onChange={(e) => setTmLeverageOn(e.target.checked)}
-                    />
-                    <span className="tm-slider" />
-                  </label>
-                </div>
+            <div className="tm-seg-list">
+              {segments.map((seg) => {
+                const isSelected = seg.id === selectedId;
+                
+// ✅ Use overrides if present
+    const o = segOverrides[seg.id];
+    const mergedStatus = o?.status ?? seg.status;
 
-                <div className="tm-action-buttons">
-                  <button
-                    className={`tm-btn primary small ${isTranslating ? "is-loading" : ""}`}
-                    onClick={handleAiTranslate}
-                    disabled={!selected || isTranslating}
-                    title="Translates the selected segment via single endpoint"
-                  >
-                    {isTranslating ? "Translating…" : "AI Translate"}
-                  </button>
-
-                  <button
-                    className="tm-btn outline small"
-                    onClick={handleCompleteSegment}
-                    disabled={!selected}
-                  >
-                    Complete
-                  </button>
-                </div>
-
-                {translationError && (
-                  <div className="tm-inline-error" role="alert">{translationError}</div>
-                )}
-                {!isDetailEnabled && selected && (
-                  <div className="tm-inline-hint">
-                    After translation, the detail card with Source/Translated will enable below.
-                  </div>
-                )}
-              </div>
-
-              {/* DETAIL CARD */}
-              <div
-                className={`tm-card tm-detail-card ${isDetailEnabled ? "" : "is-disabled"}`}
-                aria-disabled={!isDetailEnabled}
-              >
-                {!isDetailEnabled && (
-                  <div className="tm-detail-overlay">
-                    <div className="tm-overlay-content">
-                      <div className="tm-overlay-title">Waiting for translation…</div>
-                      <div className="tm-overlay-sub">
-                        Click <strong>AI Translate</strong> above, or use <strong>Translate All</strong>.
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="tm-card-header">
-                  <h3 className="tm-card-title">Section {selectedResolved?.index ?? 1}</h3>
-                  <div className="tm-card-subset">
-                    <span className="tm-light">body</span>
-                  </div>
-                </div>
-
-                {!selected && (
-                  <div className="tm-empty large">
-                    Select a segment from the left to view Source &amp; Translated text.
-                  </div>
-                )}
-
-                {selected && (
-                  <div className="tm-detail">
-                    <div className="tm-detail-row">
-                      <div className="tm-detail-row-left">
-                        <span className="tm-chip soft">Source Text</span>
-                      </div>
-                      <div className="tm-detail-row-right">
-                        <span className="tm-lang-chip">{selectedResolved?.lang || inboundLang || "EN"}</span>
-                      </div>
-                    </div>
-                    <div className="tm-box source">{selectedResolved?.source || ""}</div>
-
-                    <div className="tm-detail-actions">
-                      <button className="tm-btn outline small" disabled={!isDetailEnabled}>
-                        Edit Translation
-                      </button>
-                    </div>
-
-                    <div className="tm-chip success">Translated Text</div>
-                    <div className="tm-box translated">
-                      {isDetailEnabled
-                        ? (selectedResolved?.translated || "")
-                        : <span className="tm-light">— Awaiting translation —</span>}
-                    </div>
-
-                    <div className="tm-detail-tools">
-  <span className="tm-light">
-    {/* This pulls the actual percentage from the state  */}
-    TM {tmMatchInfo[selectedResolved?.id] || 0}%
-  </span>
-
-  <div className="tm-detail-spacer" />
-
-  <button className="tm-btn link small" disabled={!isDetailEnabled}>
-    Locked
-  </button>
-
+                // const statusClass =
+                //   seg.status === "Pending"
+                //     ? "pending"
+                //     : seg.status === "Completed"
+                //     ? "completed"
+                //     : "neutral";
+                
+                const statusClass =
+                mergedStatus === "Pending"
+                  ? "pending"
+                  : mergedStatus === "Completed"
+                  ? "completed"
+                  : "neutral";
+            //     return (
+            //       <button
+            //         key={seg.id}
+            //         className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
+            //         onClick={() => setSelectedId(seg.id)}
+            //         aria-label={`Open Segment ${seg.index}`}
+            //       >
+            //         <div className="tm-seg-item-top">
+            //           <span className={`tm-seg-pill ${statusClass}`}>Segment {seg.index}</span>
+            //           <span className="tm-seg-state">{seg.status}</span>
+            //         </div>
+            //         <div className="tm-seg-snippet">{seg.source}</div>
+            //         <div className="tm-seg-meta-row">
+            //           <span className="tm-seg-meta">{seg.words} words</span>
+            //         </div>
+            //       </button>
+            //     );
+            //   })}
+            //   {segments.length === 0 && (
+            //     <div className="tm-empty">No segment present to display.</div>
+            //   )}
+            // </div>
+            
+return (
   <button
-    className="tm-link-btn"
-    disabled={!isDetailEnabled}
-    onClick={() => {
-      // Retrieve the metadata (score, glossary, etc.) stored during translation [cite: 157-158]
-      const reviewData = selectedResolved?.reviewData || segOverrides[selectedResolved?.id]?.reviewData;
-
-      navigate("/tm-analysis", {
-        state: {
-          segment: selectedResolved,
-          reviewData: reviewData,
-          projectName: projectName,
-          targetLang: inboundLang || "EN",
-          sourceLang: "English",
-          allSegments: segments
-        }
-      });
-    }}
+    key={seg.id}
+    className={`tm-seg-item ${isSelected ? "is-selected" : ""}`}
+    onClick={() => setSelectedId(seg.id)}
+    aria-label={`Open Segment ${seg.index}`}
   >
-    View TM Analysis {selectedResolved?.status === "Review Needed" ? "(Action Required)" : ""}
+    <div className="tm-seg-item-top">
+      <span className={`tm-seg-pill ${statusClass}`}>Segment {seg.index}</span>
+      <span className="tm-seg-state">{mergedStatus}</span>
+    </div>
+    <div className="tm-seg-snippet">{seg.source}</div>
+    <div className="tm-seg-meta-row">
+      <span className="tm-seg-meta">{seg.words} words</span>
+    </div>
   </button>
+);
+})}
+{segments.length === 0 && (
+<div className="tm-empty">No segment present to display.</div>
+)}
 </div>
-                  
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
 
+          </div>
+         {/* ===== Right column: TWO SEPARATE CARDS ===== */}
+         <div className="tm-right-column">
+            {/* 1) ACTION CARD — always first */}
+            <div className="tm-card tm-action-card">
+            <div className="tm-card-header">
+      <h3 className="tm-card-title">
+        {selectedResolved?.index ? `Section ${selectedResolved.index}` : "Section"}
+      </h3>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        {/* Optional TM badge here if you want it in the header too */}
+        {/* <span className="tm-chip">TM: {selectedResolved?.status === "Completed" ? "100%" : "0%"}</span> */}
+        <span className="tm-chip soft">
+          {selectedResolved?.type || "body"}
+        </span>
+      </div>
+    </div>
+    {selectedResolved?.status !== "Completed" && 
+              <div className="tm-card-header1">
+              <div className="tm-action-title">
+                  <h3 className="tm-card-title1">TM Leverage</h3>
+                  <div className="tm-card-subset">
+                    <span className="tm-light">
+                      {tmLeverageOn
+                        ? "AI will use Translation Memory for consistency and cost savings"
+                        : "Pure AI translation without TM matching"}
+                    </span>
+                  </div>
+                </div>
+                <label className="tm-switch" aria-label="Toggle TM Leverage">
+                  <input
+                    type="checkbox"
+                    checked={tmLeverageOn}
+                    onChange={(e) => setTmLeverageOn(e.target.checked)}
+                  />
+                  <span className="tm-slider" />
+                </label>
+              </div>
+}
+
+              {/* <div className="tm-action-buttons">
+                <button
+                  className={`tm-btn primary small ${isTranslating ? "is-loading" : ""}`}
+                  onClick={handleAiTranslate}
+                  disabled={!selected || isTranslating}
+                >
+                  {isTranslating ? "Translating…" : "AI Translate"}
+                </button>
+
+                <button
+                  className="tm-btn outline small"
+                  onClick={handleCompleteSegment}
+                  disabled={!selected}
+                >
+                  Complete
+                </button>
+              </div> */}
+
+<div className="tm-detail-actions">
+  {/* Completed segment - show Edit button only when NOT editing */}
+  
+{selectedResolved?.status === "Completed" && !isEditingTranslation && (
+    <button
+      className="tm-btn outline small"
+      onClick={() => setIsEditingTranslation(true)}
+      title="Edit Translation"
+    >
+      <Edit3 size={15} className="h-4 w-4 mr-2" />
+      Edit Translation
+    </button>
+  )}
+
+  {/* ✅ UPDATE 4: Manual Save Button with DB Call */}
+  {selectedResolved?.status === "Completed" && isEditingTranslation && (
+    <button
+      className="tm-btn primary small"
+      onClick={async () => {
+        const currentText = selectedResolved?.translated || "";
+        console.log(`💾 [Manual Save] Saving Segment ${selectedResolved.index} to DB...`);
+        
+        if (currentText && currentText !== "— Awaiting translation —") {
+            await saveTranslationToDb(
+              selectedResolved.source,
+              currentText,
+              "English",
+              inboundLang,
+              projectName
+            );
+        }
+        setIsEditingTranslation(false);
+      }}
+      title="Save Changes to DB"
+    >
+      <CheckCircle size={16} className="h-4 w-4 mr-2" />
+      Save Changes
+    </button>
+  )}
+
+
+  {/* Pending / In-progress segment - show AI Translate + Complete */}
+  
+{/* Pending / In-progress segment - show AI Translate + Complete */}
+{selectedResolved?.status !== "Completed" && (
+  <>
+    <button
+      className={`tm-btn outline small ${isTranslating ? "is-loading" : ""} flex items-center gap-2`}
+      onClick={handleAiTranslate}
+      disabled={!selectedResolved || isTranslating}
+    >
+      {isTranslating
+        ? <Loader2 size={14} className="h-4 w-4 animate-spin" />
+        : <Sparkles size={14} className="h-4 w-4" />}
+      {isTranslating ? "Translating…" : "AI Translate"}
+    </button>
+
+    {/* <button
+      className="tm-btn primary small flex items-center gap-2"
+      onClick={handleCompleteSegment}
+      disabled={!hasRealTranslation(selectedResolved)}
+      title="Mark segment as complete"
+    >
+      <CheckCircle size={15} className="h-4 w-4" />
+      Complete
+    </button> */}
+  </>
+)}
+</div>
+
+              {/* Inline feedback */}
+              {translationError && (
+                <div className="tm-inline-error" role="alert">{translationError}</div>
+              )}
+              {/* {!isDetailEnabled && selected && (
+                <div className="tm-inline-hint">
+                  After translation, the detail card with Source/Translated will enable below.
+                </div>
+              )} */}
+            </div>
+
+            {/* 2) DETAIL CARD — below; disabled until translation exists */}
+            <div
+              className={`tm-card tm-detail-card ${isDetailEnabled ? "" : "is-disabled"}`}
+              aria-disabled={!isDetailEnabled}
+            >
+              {/* {!isDetailEnabled && (
+                <div className="tm-detail-overlay">
+                  <div className="tm-overlay-content">
+                    <div className="tm-overlay-title">Waiting for translation…</div>
+                    <div className="tm-overlay-sub">
+                      Click <strong>AI Translate</strong> above to fetch translation from n8n.
+                    </div>
+                  </div>
+                </div>
+              )} */}
+
+              {/* <div className="tm-card-header">
+                <h3 className="tm-card-title">Section 1</h3>
+                <div className="tm-card-subset">
+                  <span className="tm-light">body</span>
+                </div>
+              </div> */}
+
+              {/* {!selected && (
+                <div className="tm-empty large">
+                  Select a segment from the left to view Source &amp; Translated text.
+                </div>
+              )} */}
+
+              {selected && (
+                <div className="tm-detail">
+                  {/* <div className="tm-detail-row">
+                    <div className="tm-detail-row-left">
+                      <span className="tm-chip soft">Source Text</span>
+                    </div>
+                    <div className="tm-detail-row-right">
+                      <span className="tm-lang-chip">{selectedResolved?.lang || inboundLang || "EN"}</span>
+                    </div>
+                  </div>
+                  <div className="tm-box source">{selectedResolved?.source || ""}</div> */}
+
+<div className="tm-source-card">
+  <div className="tm-source-card-header">
+    <span className="tm-chip soft tm-chip-source">
+    <FileText size={15} className="h-4 w-4" />
+      Source Text
+    </span>
+    <span className="tm-lang-chip">
+      {/* {selectedResolved?.lang || inboundLang || "EN"} */}
+      EN
+    </span>
+  </div>
+
+  <div className="tm-source-card-body">
+    {selectedResolved?.source || ""}
+  </div>
+</div>
+
+                  
+                  {/* <div className="tm-chip success">Translated Text</div>
+                  <div className="tm-box translated">
+                    {isDetailEnabled
+                      ? (selectedResolved?.translated || "")
+                      : <span className="tm-light">— Awaiting translation —</span>}
+                  </div>
+                  <div className="tm-detail-tools">
+                    <span className="tm-light">
+                      {selectedResolved?.status === "Completed" ? "TM 100%" : "TM 0%"}
+                    </span>
+                    <div className="tm-detail-spacer" />
+                    <button className="tm-btn link small" disabled={!isDetailEnabled}>
+                      Locked
+                    </button>
+                    <button className="tm-btn link small" disabled={!isDetailEnabled}>
+                      View TM Analysis
+                    </button>
+                  </div> */}
+                  
+{/* Translated Text card (pretty version) */}
+<div className="tm-translated-card">
+  {/* Header row */}
+  <div className="tm-translated-card-header">
+    <span className="tm-chip success tm-chip-translated">
+    <Languages size={15} className="h-4 w-4" />
+      Translated Text
+    </span>
+
+
+    <span className="tm-lang-chip1">
+    {inboundLang}
+  </span>
+  {/* <span className="tm-light">
+    TM {tmMatchInfo[selectedResolved?.id] || 0}%
+  </span> */}
+   
+<div className="tm-translated-tools" >
+    {/* Completed + not editing → Locked pill */}
+    {selectedResolved?.status === "Completed" && !isEditingTranslation && (
+      <span className="tm-locked-pill" title="Locked">
+        <Lock size={13} className="h-3 w-3 mr-1" />
+        Locked
+      </span>
+    )}
+
+    {/* Completed + editing → Unlock + Editing pill */}
+    {selectedResolved?.status === "Completed" && isEditingTranslation && (
+      <span className="tm-editing-pill" title="Editing">
+        <Unlock size={13} className="h-3 w-3 mr-1" />
+        Editing
+      </span>
+    )}
+
+    {/* Completed only → View TM Analysis */}
+    {selectedResolved?.status === "Completed" && (
+      <button
+        className="tm-btn link small"
+        disabled={!isDetailEnabled}
+        onClick={() => {
+          const reviewData = selectedResolved?.reviewData || segOverrides[selectedResolved?.id]?.reviewData;
+    
+          navigate("/tm-analysis", {
+            state: {
+              segment: selectedResolved,
+              reviewData: reviewData,
+              projectName: projectName,
+              targetLang: inboundLang || "EN",
+              sourceLang: "English",
+              allSegments: segments
+            }
+          });
+        }}
+      >
+         <BarChart3 size={15} className="h-4 w-4 mr-2" />
+        {/* View TM Analysis */}
+        View TM Analysis {selectedResolved?.status === "Review Needed" ? "(Action Required)" : ""}
+      </button>
+    )}
+  </div>
+
+  </div>
+
+  {/* Body panel (rounded green-tinted area) */}
+  {/* <div className="tm-translated-card-body">
+    {isDetailEnabled
+      ? (selectedResolved?.translated || "")
+      : <span className="tm-light">— Awaiting translation —</span>}
+  </div> */}
+  
+<div className="tm-translated-card-body">
+  {!isDetailEnabled ? (
+    <span className="tm-light">Enter translation or use TM/AI suggestions...</span>
+  ) : isEditingTranslation ? (
+    <textarea
+      value={selectedResolved?.translated || ""}
+      onChange={(e) => {
+        const newText = e.target.value;
+        setSegOverrides(prev => ({
+          ...prev,
+          [selectedResolved.id]: {
+            ...prev[selectedResolved.id],
+            translated: newText
+          }
+        }));
+      }}
+      placeholder="Edit translated text..."
+      className="tm-translated-textarea"
+    />
+  ) : (
+    <div className="tm-translated-readonly">
+      {selectedResolved?.translated || ""}
+    </div>
+  )}
+</div>
+
+</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+        </div>
+         )}
         {/* Integrated Draft tab content (same page) */}
         {activeTab === "draft" && (
           <DraftPanel
