@@ -258,6 +258,7 @@
     padding: 8px 16px;
     font-size: 14px;
     font-weight: 600;
+    
   }
   
   .cultural-page .tm-btn.primary {
@@ -667,15 +668,29 @@
   cursor: pointer;
   font-size: 14px;
 }
+
+
+/* If you only want the text to be nowrap (and allow button to wrap in container) */
+.cultural-page .tm-btn-label {
+  white-space: nowrap;
+}
+
 .cultural-page .tm-btn.primary {
-  background: #10b981;
+  /* background: #10b981;
   color: #fff;
-  border-color: #0fa372;
+  border-color: #0fa372; */
+  color: #fff;
+    background: #1f7aec;
+    border: 1px solid #1f7aec;
+    border-radius: 10px;
 }
 .cultural-page .tm-btn.outline {
-  background: #fff;
+  /* background: #fff;
   border-color: #d1d5db;
-  color: #111827;
+  color: #111827; */
+  background: transparent;
+    border: 1px solid #1F7AEC;
+    color: #1F7AEC;
 }
 
 
@@ -1363,3 +1378,59 @@
       transition: none !important;
     }
   }
+
+  /* --- Cultural Adaptation Header (Two Row Layout) --- */
+  .cultural-page .ci-header-block {
+  background: #fff;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: grid;
+  gap: 16px;
+}
+
+/* Row 1: Title + Subtitle */
+.cultural-page .ci-header-top {
+  display: grid;
+  gap: 4px;
+}
+
+.cultural-page .ci-header-top .tm-section-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.cultural-page .ci-header-top .tm-section-sub {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Row 2: Progress (left) + Buttons (right) */
+.cultural-page .ci-header-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Progress block */
+.cultural-page .ci-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+/* Buttons right side */
+.cultural-page .ci-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cultural-page .ci-actions .tm-btn {
+  display: inline-flex;
+  white-space: nowrap;
+  gap: 6px;
+  align-items: center;
+}

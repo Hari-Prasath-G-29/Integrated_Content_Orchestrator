@@ -73,11 +73,17 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
   };
   const ENV = getEnv();
 
-  /** Cultural Translation webhook URL (used by Analyze with AI) */
+   /** Single-segment webhook URL */
   const N8N_CULTURAL_WEBHOOK_URL =
     ENV.REACT_APP_N8N_CULTURAL_WEBHOOK_URL ||
     ENV.VITE_N8N_CULTURAL_WEBHOOK_URL ||
     "http://172.16.4.237:8010/webhook/cultural";
+
+     /** Batch webhook URL */
+  const N8N_CULTURAL_BATCH_WEBHOOK_URL =
+  ENV.REACT_APP_N8N_CULTURAL_BATCH_WEBHOOK_URL ||
+  ENV.VITE_N8N_CULTURAL_BATCH_WEBHOOK_URL ||
+  "http://172.16.4.237:8010/webhook/culturalTranslateAll";
 
   /** Token for n8n (optional) */
   const N8N_AUTH = ENV.REACT_APP_N8N_TOKEN || ENV.VITE_N8N_TOKEN || "";
@@ -652,6 +658,11 @@ useEffect(() => {
   const [analysisError, setAnalysisError] = useState(null);
   const [analysisBySegment, setAnalysisBySegment] = useState({}); // cache
 
+  /** Batch Analysis state */
+  const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
+  const [analyzeAllError, setAnalyzeAllError] = useState(null);
+  const [analyzeAllSuccess, setAnalyzeAllSuccess] = useState("");
+
   /** Chip selections state (kept for future use; not used for A/B) */
   const [termSelectionsBySeg, setTermSelectionsBySeg] = useState({});
 
@@ -782,6 +793,8 @@ useEffect(() => {
       setIsAnalyzing(false);
     }
   };
+
+  
 
   const handleReanalyze = async () => {
     if (!selectedResolved) return;
@@ -1012,6 +1025,261 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
       .join("\n------------------------------\n\n");
   }, [reportItems]);
 
+
+   /** ====================== NEW: BATCH HELPERS ======================= */
+
+  // Parse {"segment 1": "...", "segment 2": "..."} into [{index, text}, ...]
+  const parseSegmentKeyMap = (obj) => {
+    const out = [];
+    if (!obj || typeof obj !== "object") return out;
+    for (const [key, value] of Object.entries(obj)) {
+      const m = String(key).match(/segment\s*(\d+)/i);
+      if (m && m[1] && typeof value === "string") {
+        const index = parseInt(m[1], 10);
+        if (Number.isFinite(index)) {
+          out.push({ index, text: value.trim() });
+        }
+      }
+    }
+    return out.sort((a, b) => a.index - b.index);
+  };
+
+  // Extract best "adapted/translated" text from an item for non-segment-keyed shapes
+  const extractAdaptedTextFromItem = (item) => {
+    if (!item) return "";
+    const up = (val) => (typeof val === "string" ? val.trim() : "");
+    const lowercaseKeys = (obj) =>
+      Object.keys(obj || {}).reduce((acc, k) => {
+        acc[k.toLowerCase()] = obj[k];
+        return acc;
+      }, {});
+
+    let candidate = "";
+
+    candidate = up(item.suggestion) || up(item.culturalTranslated) || up(item.translated);
+    if (candidate) return candidate;
+
+    const rawOut = item.output ?? item.cultural_output ?? item.data ?? null;
+
+    // If rawOut is an object of {"segment N": "..."} -> this will be handled in extractBatchMap
+    if (rawOut != null) {
+      if (typeof rawOut === "string") {
+        const parsed = tryParseJSON(rawOut);
+        if (parsed && typeof parsed === "object") {
+          const l = lowercaseKeys(parsed);
+          candidate =
+            up(parsed.suggestion) ||
+            up(parsed.culturalTranslated) ||
+            up(parsed.translated) ||
+            up(parsed.output);
+          if (candidate) return candidate;
+
+          for (const key of Object.keys(l)) {
+            const v = l[key];
+            if (typeof v === "string" && /cultur|adapt|translat|suggest/i.test(key)) {
+              return v.trim();
+            }
+          }
+        } else {
+          return rawOut.trim();
+        }
+      } else if (typeof rawOut === "object") {
+        // If object contains fields suggestion/culturalTranslated/translated/output
+        const l = lowercaseKeys(rawOut);
+        candidate =
+          up(rawOut.suggestion) ||
+          up(rawOut.culturalTranslated) ||
+          up(rawOut.translated) ||
+          up(rawOut.output);
+        if (candidate) return candidate;
+
+        for (const key of Object.keys(l)) {
+          const v = l[key];
+          if (typeof v === "string" && /cultur|adapt|translat|suggest/i.test(key)) {
+            return v.trim();
+          }
+        }
+      }
+    }
+
+    for (const k of Object.keys(item)) {
+      const v = item[k];
+      if (typeof v === "string" && /cultur|adapt|translat|suggest/i.test(k)) {
+        return v.trim();
+      }
+    }
+
+    return "";
+  };
+
+  // Given a batch JSON body, produce a map { [segmentId]: adaptedText }
+  const extractBatchMap = (body, originalPayloadList) => {
+    const byId = {};
+    if (!body) return byId;
+
+    // Prefer array results
+    const arr =
+      (Array.isArray(body) ? body : null) ||
+      (Array.isArray(body?.data) ? body.data : null) ||
+      (Array.isArray(body?.items) ? body.items : null);
+
+    if (Array.isArray(arr) && arr.length > 0) {
+      arr.forEach((item, idx) => {
+        // 🔹 SPECIAL CASE: {"output": {"segment 1": "...", "segment 2": "..."}}
+        if (item && item.output && typeof item.output === "object") {
+          const pairs = parseSegmentKeyMap(item.output);
+          pairs.forEach(({ index, text }) => {
+            const orig = originalPayloadList.find((p) => p.index === index);
+            if (orig?.segmentId && text) {
+              byId[String(orig.segmentId)] = text;
+            }
+          });
+          return; // handled
+        }
+
+        // Usual shapes: segmentId/index present in item
+        const segId =
+          item?.segmentId ||
+          item?.segment_id ||
+          item?.meta?.segmentId ||
+          item?.meta?.segment_id ||
+          null;
+        const index =
+          typeof item?.index === "number"
+            ? item.index
+            : typeof item?.meta?.index === "number"
+            ? item.meta.index
+            : null;
+
+        const adapted = extractAdaptedTextFromItem(item);
+        if (!adapted) return;
+
+        if (segId) {
+          byId[String(segId)] = adapted;
+        } else if (index != null) {
+          const original = originalPayloadList.find((p) => p.index === index);
+          if (original?.segmentId) {
+            byId[String(original.segmentId)] = adapted;
+          }
+        } else {
+          // Fallback to positional mapping
+          const orig = originalPayloadList[idx];
+          if (orig?.segmentId) {
+            byId[String(orig.segmentId)] = adapted;
+          }
+        }
+      });
+
+      return byId;
+    }
+
+    // Non-array shapes: maybe { output: { "segment 1": "..." } } at top-level
+    if (body && typeof body === "object") {
+      if (body.output && typeof body.output === "object") {
+        const pairs = parseSegmentKeyMap(body.output);
+        pairs.forEach(({ index, text }) => {
+          const orig = originalPayloadList.find((p) => p.index === index);
+          if (orig?.segmentId && text) {
+            byId[String(orig.segmentId)] = text;
+          }
+        });
+        return byId;
+      }
+
+      // Or an object keyed directly by segment ids
+      for (const k of Object.keys(body)) {
+        const v = body[k];
+        if (v && (typeof v === "string" || typeof v === "object")) {
+          const adapted =
+            typeof v === "string" ? v.trim() : extractAdaptedTextFromItem(v);
+          if (adapted) byId[k] = adapted;
+        }
+      }
+    }
+
+    return byId;
+  };
+
+  /** --------- Analyze ALL With AI (batch) --------- */
+  const handleAnalyzeAllClick = async () => {
+    setAnalyzeAllError(null);
+    setAnalyzeAllSuccess("");
+    setIsAnalyzingAll(true);
+
+    try {
+      if (!N8N_CULTURAL_BATCH_WEBHOOK_URL) {
+        throw new Error("N8N_CULTURAL_BATCH_WEBHOOK_URL is not configured.");
+      }
+
+      // Send all segments (or only those with translation; adjust as needed)
+      const payloadList = segments
+        .filter((s) => s?.translated?.trim()?.length) // can relax if needed
+        .map((s) => buildCulturalPayload(s));
+
+      if (!payloadList.length) {
+        throw new Error("No segments with translated text found to analyze.");
+      }
+
+      const res = await fetch(N8N_CULTURAL_BATCH_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
+        },
+        body: JSON.stringify(payloadList),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`n8n batch responded with ${res.status}: ${txt}`);
+      }
+
+      let body;
+      try {
+        body = await res.json();
+      } catch {
+        const txt = await res.text();
+        body = tryParseJSON(txt) ?? { output: txt };
+      }
+
+      // Build { segmentId -> adaptedText } using special "segment N" mapping
+      const mapById = extractBatchMap(body, payloadList);
+      const appliedCount = Object.keys(mapById).length;
+      if (!appliedCount) {
+        throw new Error("Batch completed but returned no adapted texts.");
+      }
+
+      // Apply results and mark each as Reviewed
+      setSegOverrides((prev) => {
+        const next = { ...prev };
+        segments.forEach((s) => {
+          const adapted = mapById[s.id];
+          if (adapted && adapted.trim()) {
+            const priorFrom =
+              (next[s.id]?.adapted || s.translated || s.source || "").trim();
+            next[s.id] = {
+              ...(next[s.id] || {}),
+              adapted: adapted.trim(),
+              status: "Reviewed", // 🔹 Mark as Reviewed per your requirement
+              // Optional: capture changeLog from previous to new
+              changeLog:
+                priorFrom && priorFrom !== adapted.trim()
+                  ? { from: priorFrom, to: adapted.trim() }
+                  : next[s.id]?.changeLog,
+            };
+          }
+        });
+        return next;
+      });
+
+      //setAnalyzeAllSuccess(`Adapted texts updated for ${appliedCount} segment(s).`);
+    } catch (err) {
+      setAnalyzeAllError(err.message || "Batch analysis failed.");
+    } finally {
+      setIsAnalyzingAll(false);
+    }
+  };
+
   return (
     <div className="cultural-page">
     {/* <div className={`cultural-page tm-app ${isFocusMode ? 'is-focus' : ''}`}> */}
@@ -1196,7 +1464,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
         {/* WORKSPACE CONTENT SWITCHER */}
         {activeTab === "adaptation" ? (
   <div>
-<section className="tm-tabs-right">
+{/* <section className="tm-tabs-right">
   <div className="tm-status-left">
     <h2 className="tm-section-title">Cultural Adaptation Workspace</h2>
     <p className="tm-section-sub">Review translations and adapt content for cultural relevance</p>
@@ -1212,11 +1480,82 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
 
   <div className="tm-tabs-actions">
     <button className="tm-btn outline">
-    <FileDown size={15} className="mr-2 h-4 w-4" />Generate Agency Handoff PDF</button>
-    <button className="tm-btn primary" onClick={handleCompletePhase}>Complete Phase 3</button>
+    <FileDown size={15} className="mr-2 h-4 w-4" />
+    <span className="tm-btn-label">Generate Agency Handoff PDF</span>
+    </button>
+    
+ <button
+    className={`tm-btn outline ${isAnalyzingAll ? "is-loading" : ""}`}
+    onClick={handleAnalyzeAllClick}
+    disabled={isAnalyzingAll || segments.length === 0}
+  >
+    <Brain size={14} className="h-4 w-4 mr-2" />
+<span className="tm-btn-label">
+    {isAnalyzingAll ? "Analyzing all…" : "Analyze All (AI)"}
+  </span>
+
+  </button>
+
+    <button className="tm-btn primary" onClick={handleCompletePhase}>
+    <span className="tm-btn-label">Complete Phase 3</span>
+      </button>
+  </div>
+</section> */}
+<section className="ci-header-block">
+  {/* Row 1 — Title + Subtitle */}
+  <div className="ci-header-top">
+    <h2 className="tm-section-title">Cultural Adaptation Workspace</h2>
+    <p className="tm-section-sub">
+      Review translations and adapt content for cultural relevance
+    </p>
+  </div>
+
+  {/* Row 2 — Progress + Buttons */}
+  <div className="ci-header-bottom">
+    <div className="ci-progress">
+      <span className="tm-progress-inline-label">Progress:</span>
+      <span className="tm-progress-inline-value">
+      {progressItems.reviewed} / {progressItems.total} reviewed
+      </span>
+
+      <div className="tm-progress-inline-bar">
+        <div
+          className="tm-progress-inline-fill"
+          style={{ width: `${progressPct}%` }}
+        ></div>
+      </div>
+    </div>
+
+    <div className="ci-actions">
+      <button className="tm-btn outline">
+        <FileDown size={15} /> Generate Agency Handoff PDF
+      </button>
+
+      <button  className={`tm-btn outline ${isAnalyzingAll ? "is-loading" : ""}`}
+    onClick={handleAnalyzeAllClick}
+    disabled={isAnalyzingAll || segments.length === 0}>
+        <Brain size={15} />  {isAnalyzingAll ? "Analyzing all…" : "Analyze All With (AI)"}
+      </button>
+
+      <button className="tm-btn primary" onClick={handleCompletePhase}>
+        Complete Phase 3
+      </button>
+    </div>
   </div>
 </section>
       
+                  {/* Inline batch feedback */}
+                  {(analyzeAllError || analyzeAllSuccess) && (
+                    <div style={{ marginTop: 8 }}>
+                      {analyzeAllError && (
+                        <div className="tm-inline-error" role="alert">{analyzeAllError}</div>
+                      )}
+                      {analyzeAllSuccess && (
+                        <div className="tm-inline-success" role="status">{analyzeAllSuccess}</div>
+                      )}
+                    </div>
+                  )}
+                  
         <section className="tm-workspace ci-workspace">
           {/* Left card: Content Segments */}
           <div className="tm-card tm-left">
